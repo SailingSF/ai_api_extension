@@ -61,5 +61,3 @@ export interface NSFWModalProps {
   onConfirm: () => void;
   prompt: string;
 }
-
-

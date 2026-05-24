@@ -39,17 +39,26 @@ function AppContent(): JSX.Element {
   };
 
   return (
-    <div className="App min-h-screen bg-gradient-to-br from-purple-400 to-indigo-600 p-4 sm:p-8 font-sans">
+    <div className="App min-h-screen bg-gradient-to-br from-purple-400 to-indigo-600 p-4 font-sans sm:p-8">
       <Helmet>
         <title>AI Art Arena – AI Image Generator</title>
-        <meta name="description" content="Generate AI images, compare models, and explore the gallery." />
+        <meta
+          name="description"
+          content="Generate AI images, compare models, and explore the gallery."
+        />
       </Helmet>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
-          <Route path="/" element={<Home onOpenAuthModal={handleOpenAuthModal} onLogout={handleLogout} />} />
+          <Route
+            path="/"
+            element={<Home onOpenAuthModal={handleOpenAuthModal} onLogout={handleLogout} />}
+          />
           <Route path="/arena" element={<ArenaGenerator openAuthModal={handleOpenAuthModal} />} />
           <Route path="/generate" element={<FreeImageGenerator />} />
-          <Route path="/premium" element={<PremiumGenerator openAuthModal={handleOpenAuthModal} />} />
+          <Route
+            path="/premium"
+            element={<PremiumGenerator openAuthModal={handleOpenAuthModal} />}
+          />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/info" element={<Info />} />
           <Route path="/activate/:token" element={<ActivateAccount />} />
@@ -79,5 +88,3 @@ function App(): JSX.Element {
 }
 
 export default App;
-
-
