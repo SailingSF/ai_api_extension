@@ -1,0 +1,7 @@
+build
+dist
+node_modules
+coverage
+package-lock.json
+public/sitemap.xml
+public/robots.txt
