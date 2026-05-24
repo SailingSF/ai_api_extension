@@ -43,7 +43,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthenticate, 
         if (response.data.user?.credits != null) {
           localStorage.setItem('credits', String(response.data.user.credits));
         }
-        setSuccessMessage(isLogin ? 'Login successful!' : `${response.data.message} You're now signed in.`);
+        setSuccessMessage(
+          isLogin ? 'Login successful!' : `${response.data.message} You're now signed in.`
+        );
         setTimeout(() => {
           onAuthenticate(true);
           onClose();
@@ -72,33 +74,81 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthenticate, 
 
   const renderLoginForm = () => (
     <>
-      <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 mb-4 border rounded" required />
-      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2 mb-4 border rounded" required />
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="mb-4 w-full rounded border p-2"
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="mb-4 w-full rounded border p-2"
+        required
+      />
     </>
   );
 
   const renderRegisterForm = () => (
     <>
-      <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 mb-4 border rounded" required />
-      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2 mb-4 border rounded" required />
-      <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full p-2 mb-4 border rounded" required />
-      <input type="text" placeholder="Username (optional)" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full p-2 mb-4 border rounded" />
-      <p className="text-sm text-gray-600 mb-4">After registration, check your email to verify your account and receive 20 free credits!</p>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="mb-4 w-full rounded border p-2"
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="mb-4 w-full rounded border p-2"
+        required
+      />
+      <input
+        type="password"
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        className="mb-4 w-full rounded border p-2"
+        required
+      />
+      <input
+        type="text"
+        placeholder="Username (optional)"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        className="mb-4 w-full rounded border p-2"
+      />
+      <p className="mb-4 text-sm text-gray-600">
+        After registration, check your email to verify your account and receive 20 free credits!
+      </p>
     </>
   );
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-96">
-        <h2 className="text-2xl font-bold mb-2">{isLogin ? 'Login' : 'Register'}</h2>
-        {message && <p className="text-blue-500 mb-4">{message}</p>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="w-96 rounded-lg bg-white p-6 shadow-xl">
+        <h2 className="mb-2 text-2xl font-bold">{isLogin ? 'Login' : 'Register'}</h2>
+        {message && <p className="mb-4 text-blue-500">{message}</p>}
         <form onSubmit={handleSubmit}>
           {isLogin ? renderLoginForm() : renderRegisterForm()}
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-          {successMessage && <p className="text-green-500 mb-4">{successMessage}</p>}
-          <button type="submit" className="w-full bg-black text-white p-2 rounded hover:bg-blue-600">{isLogin ? 'Login' : 'Register'}</button>
+          {error && <p className="mb-4 text-red-500">{error}</p>}
+          {successMessage && <p className="mb-4 text-green-500">{successMessage}</p>}
+          <button
+            type="submit"
+            className="w-full rounded bg-black p-2 text-white hover:bg-blue-600"
+          >
+            {isLogin ? 'Login' : 'Register'}
+          </button>
         </form>
         <p className="mt-4 text-center">
           {isLogin ? "Don't have an account? " : 'Already have an account? '}
@@ -117,12 +167,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthenticate, 
             {isLogin ? 'Register' : 'Login'}
           </button>
         </p>
-        <button onClick={onClose} className="mt-4 w-full bg-gray-300 text-gray-800 p-2 rounded hover:bg-gray-400">Close</button>
+        <button
+          onClick={onClose}
+          className="mt-4 w-full rounded bg-gray-300 p-2 text-gray-800 hover:bg-gray-400"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
 };
 
 export default AuthModal;
-
-

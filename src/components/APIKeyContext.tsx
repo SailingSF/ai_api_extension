@@ -30,5 +30,3 @@ export const APIKeyProvider: React.FC<React.PropsWithChildren> = ({ children }) 
 
   return <APIKeyContext.Provider value={value}>{children}</APIKeyContext.Provider>;
 };
-
-

@@ -31,17 +31,31 @@ const PasswordSetup: React.FC<PasswordSetupProps> = ({ isOpen, setIsOpen, onAuth
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white border-4 border-black rounded-xl p-6 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4">Enter Password</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="w-full max-w-md rounded-xl border-4 border-black bg-white p-6">
+        <h2 className="mb-4 text-2xl font-bold">Enter Password</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" required className="w-full p-2 border-2 border-black rounded-md" />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+            required
+            className="w-full rounded-md border-2 border-black p-2"
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex justify-end space-x-2">
-            <button type="button" onClick={() => setIsOpen(false)} className="bg-gray-200 text-black font-bold py-2 px-4 rounded-md hover:bg-gray-300 transition duration-300">
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded-md bg-gray-200 px-4 py-2 font-bold text-black transition duration-300 hover:bg-gray-300"
+            >
               Cancel
             </button>
-            <button type="submit" className="bg-black text-white font-bold py-2 px-4 rounded-md hover:bg-gray-800 transition duration-300">
+            <button
+              type="submit"
+              className="rounded-md bg-black px-4 py-2 font-bold text-white transition duration-300 hover:bg-gray-800"
+            >
               Submit
             </button>
           </div>
@@ -52,5 +66,3 @@ const PasswordSetup: React.FC<PasswordSetupProps> = ({ isOpen, setIsOpen, onAuth
 };
 
 export default PasswordSetup;
-
-

@@ -20,9 +20,12 @@ const Tooltip: React.FC<TooltipProps> = ({ children, text }) => {
     timeoutRef.current = window.setTimeout(() => setIsVisible(false), 300);
   };
 
-  useEffect(() => () => {
-    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    },
+    []
+  );
 
   useEffect(() => {
     const tooltipElement = tooltipRef.current;
@@ -38,13 +41,13 @@ const Tooltip: React.FC<TooltipProps> = ({ children, text }) => {
 
   return (
     <div className="relative inline-block">
-      <div className="p-2 -m-2" onMouseEnter={showTooltip} onMouseLeave={hideTooltip}>
+      <div className="-m-2 p-2" onMouseEnter={showTooltip} onMouseLeave={hideTooltip}>
         {children}
       </div>
       <div
         ref={tooltipRef}
-        className={`absolute z-10 px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-lg tooltip dark:bg-gray-700 transition-all duration-300 ease-in-out ${
-          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+        className={`tooltip absolute z-10 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 ease-in-out dark:bg-gray-700 ${
+          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'
         }`}
         style={{
           left: '50%',
@@ -74,5 +77,3 @@ const Tooltip: React.FC<TooltipProps> = ({ children, text }) => {
 };
 
 export default Tooltip;
-
-

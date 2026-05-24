@@ -14,7 +14,9 @@ const ActivateAccount: React.FC = () => {
   useEffect(() => {
     const activateAccount = async () => {
       try {
-        const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/activate/`, { token });
+        const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/activate/`, {
+          token,
+        });
         if (response.data.success || response.data.message) {
           setStatus('success');
           setMessage(response.data.message || 'Your account has been successfully activated!');
@@ -37,23 +39,27 @@ const ActivateAccount: React.FC = () => {
   }, [token, navigate]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-400 to-indigo-600 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-purple-400 to-indigo-600 p-4">
       <Helmet>
         <title>Activate Account – AI Art Arena</title>
         <meta name="robots" content="noindex" />
       </Helmet>
-      <div className="bg-white p-8 rounded-lg shadow-md text-center">
-        <h1 className="text-2xl font-bold mb-4">Account Activation</h1>
+      <div className="rounded-lg bg-white p-8 text-center shadow-md">
+        <h1 className="mb-4 text-2xl font-bold">Account Activation</h1>
         {status === 'activating' && <p>Activating your account...</p>}
         {status === 'success' && (
           <div>
-            <p className="text-green-600 mb-2">{message}</p>
-            {!message.includes('already been verified') && <p>You have claimed your 20 free credits.</p>}
+            <p className="mb-2 text-green-600">{message}</p>
+            {!message.includes('already been verified') && (
+              <p>You have claimed your 20 free credits.</p>
+            )}
             <p className="mt-4">Redirecting to home page in 5 seconds...</p>
           </div>
         )}
         {status === 'error' && (
-          <p className="text-red-600">There was an error activating your credits. Please try again or contact support.</p>
+          <p className="text-red-600">
+            There was an error activating your credits. Please try again or contact support.
+          </p>
         )}
       </div>
     </div>
@@ -61,5 +67,3 @@ const ActivateAccount: React.FC = () => {
 };
 
 export default ActivateAccount;
-
-

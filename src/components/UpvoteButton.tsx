@@ -29,7 +29,11 @@ const UpvoteButton: React.FC<UpvoteButtonProps> = ({ imageId, initialVotes = 0, 
       }
 
       const config = { headers: { Authorization: `Token ${token}` } };
-      const response = await axios.post(`${API_BASE_URL}/api/images/upvote/`, { image_id: imageId }, config);
+      const response = await axios.post(
+        `${API_BASE_URL}/api/images/upvote/`,
+        { image_id: imageId },
+        config
+      );
 
       if (response.status === 200) {
         setHasVoted(true);
@@ -57,7 +61,7 @@ const UpvoteButton: React.FC<UpvoteButtonProps> = ({ imageId, initialVotes = 0, 
   return (
     <button
       onClick={handleUpvote}
-      className={`p-2 rounded-full ${hasVoted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'} transition duration-300`}
+      className={`rounded-full p-2 ${hasVoted ? 'cursor-not-allowed bg-gray-300 text-gray-500' : 'bg-blue-500 text-white hover:bg-blue-600'} transition duration-300`}
       disabled={hasVoted}
       aria-label={hasVoted ? 'Already upvoted' : 'Upvote image'}
     >
@@ -67,5 +71,3 @@ const UpvoteButton: React.FC<UpvoteButtonProps> = ({ imageId, initialVotes = 0, 
 };
 
 export default UpvoteButton;
-
-
