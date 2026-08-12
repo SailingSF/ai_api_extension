@@ -24,6 +24,8 @@ export interface FreeModel {
   providers: string[];
   supports_negative_prompt: boolean;
   speed: ModelSpeed;
+  /** Output is always stored flagged NSFW and excluded from the public gallery. */
+  nsfw: boolean;
   tags: string[];
 }
 

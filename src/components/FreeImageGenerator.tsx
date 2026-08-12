@@ -61,7 +61,7 @@ const FreeImageGenerator: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     const currentModel = models.find((model) => model.key === selectedModel);
-    if (currentModel?.tags.includes('nsfw')) {
+    if (currentModel?.nsfw) {
       setShowNSFWWarning(true);
     } else {
       await generateImage();
