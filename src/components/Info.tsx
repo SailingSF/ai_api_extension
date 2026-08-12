@@ -79,9 +79,9 @@ const Info: React.FC = () => {
               A: After creating an image in the <em>PREMIUM</em> Generator you will get the
               "enhanced prompt" we turned it into. This was done in accordance with prompt
               engineering guidelines for that prompt. You can edit and submit a subsequent prompt
-              from this field and the prompt won't be touched. This prompt is final. If you are
-              requesting an image from the Dall-e-3 model, OpenAI applies their own prompt
-              engineering (and safety) that is <em>not</em> editable.
+              from this field and the prompt won't be touched. This prompt is final. Note that some
+              models, such as OpenAI's GPT Image 2, apply their own prompt engineering (and safety
+              filtering) on top of yours, which is <em>not</em> editable.
             </p>
           </div>
           <div>

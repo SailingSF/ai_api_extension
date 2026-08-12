@@ -1,69 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import InPageNavbar from './InPageNavbar';
 import NSFWModal from './NSFWModal';
 import axios from 'axios';
-import type { TextToImageModel } from '../types';
-
-const models: (TextToImageModel & { description: string })[] = [
-  {
-    id: 'flux/schnell',
-    name: 'FLUX.1 [schnell]',
-    supportsNegativePrompt: false,
-    description:
-      'FLUX.1 [schnell] is optimized for speed, delivering quick results while maintaining good quality. Ideal for rapid prototyping and iterative design processes.',
-  },
-  {
-    id: 'flux/dev',
-    name: 'FLUX.1 [dev]',
-    supportsNegativePrompt: false,
-    description:
-      "FLUX.1 [dev] is the development version of FLUX, offering cutting-edge features and improvements. It's great for experimenting with the latest AI image generation capabilities.",
-  },
-  {
-    id: 'dall-e-3',
-    name: 'DALL-E 3',
-    supportsNegativePrompt: false,
-    description:
-      "DALL-E 3 excels at creating highly detailed images from text descriptions. It's particularly good at understanding complex prompts and generating creative, diverse outputs. OpenAI takes all prompts and transforms them to make more detailed images, but also will remove things for safety and copyright reasons, users have no control over this but the prompt they used will be returned so you can see what generated that image. Sometimes it can feel 'woke' but the main purpose is to make better, more interesting images.",
-  },
-  {
-    id: 'gpt-image-1',
-    name: 'OpenAI GPT Image Model',
-    supportsNegativePrompt: false,
-    description:
-      'The best image generation model from OpenAI. It makes the best images, use the prompt improver!',
-  },
-  {
-    id: 'stable-diffusion-v35-medium',
-    name: 'Stable Diffusion V3.5',
-    supportsNegativePrompt: true,
-    description:
-      "Stable Diffusion V3.5 is the most recent and powerful model of the open Stable Diffusion line. It's versatile but performs best at making very 'AI Art' looking images, with the added benefit of supporting negative prompts for fine-tuned control.",
-  },
-  {
-    id: 'playground-v25',
-    name: 'Playground v2.5',
-    supportsNegativePrompt: true,
-    description:
-      "Playground v2.5 is known for its flexibility and wide range of artistic styles. It's great for exploring different visual aesthetics and supports negative prompts for precise adjustments.",
-  },
-  {
-    id: 'recraft-v3',
-    name: 'Recraft v3',
-    supportsNegativePrompt: false,
-    description:
-      'Recraft v3 is a powerful model that excels at creating detailed and realistic images. It is suitable for a wide range of image generation tasks and excels at text rendering.',
-  },
-  {
-    id: 'flux-pro',
-    name: 'FLUX.1.1 [pro]',
-    supportsNegativePrompt: false,
-    description:
-      "FLUX.1.1 [pro] is the premium version of FLUX, offering enhanced image quality and more advanced features. It's ideal for professional-grade image generation tasks.",
-  },
-];
+import { useModelCatalog } from '../useModelCatalog';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
@@ -74,13 +15,25 @@ interface PremiumGeneratorProps {
 const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) => {
   const [prompt, setPrompt] = useState<string>('');
   const [negativePrompt, setNegativePrompt] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>(models[0].id);
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showNSFWWarning, setShowNSFWWarning] = useState<boolean>(false);
   const navigate = useNavigate();
   const [isLoadingRandomPrompt, setIsLoadingRandomPrompt] = useState<boolean>(false);
+
+  const { catalog, isLoading: isLoadingModels, error: modelsError } = useModelCatalog();
+  // Memoised so the empty-array fallback doesn't produce a new reference each
+  // render, which would re-run the default-selection effect forever.
+  const models = useMemo(() => catalog?.premium ?? [], [catalog]);
+
+  // Default to the first model the backend offers, once the catalog arrives.
+  useEffect(() => {
+    if (!selectedModel && models.length > 0) {
+      setSelectedModel(models[0].key);
+    }
+  }, [models, selectedModel]);
 
   const clearAllPrompts = (): void => {
     setPrompt('');
@@ -106,8 +59,8 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
       openAuthModal();
       return;
     }
-    const currentModel = models.find((model) => model.id === selectedModel);
-    if ((currentModel as any)?.nsfw) {
+    const currentModel = models.find((model) => model.key === selectedModel);
+    if (currentModel?.tags.includes('nsfw')) {
       setShowNSFWWarning(true);
     } else {
       await generateImage();
@@ -149,8 +102,15 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
       } else {
         // eslint-disable-next-line no-console
         console.error('Error generating image:', error);
+        // DRF validation errors arrive as a JSON array of strings; prefer the
+        // backend's explanation over "Request failed with status code 400".
+        const data = error.response?.data;
+        const backendMessage: string | undefined = Array.isArray(data)
+          ? data[0]
+          : (data?.detail ?? data?.message);
         openAuthModal(
-          `Error generating image: ${error.message}. This is probably not Max's fault. I would try again a few times before giving up. But I'm built different, so do you.`
+          backendMessage ??
+            `Error generating image: ${error.message}. This is probably not Max's fault. I would try again a few times before giving up. But I'm built different, so do you.`
         );
       }
     } finally {
@@ -173,7 +133,7 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
     }
   };
 
-  const currentModel = models.find((model) => model.id === selectedModel);
+  const currentModel = models.find((model) => model.key === selectedModel);
 
   return (
     <div className="mx-auto w-full overflow-hidden rounded-xl border-4 border-black bg-white shadow-xl md:w-3/4">
@@ -204,14 +164,18 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
               id="model"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full rounded-md border-2 border-black p-2 text-sm"
+              disabled={isLoadingModels || models.length === 0}
+              className="w-full rounded-md border-2 border-black p-2 text-sm disabled:bg-gray-100"
             >
+              {isLoadingModels && <option>Loading models…</option>}
               {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
+                <option key={model.key} value={model.key}>
+                  {model.label} — {model.cost} {model.cost === 1 ? 'credit' : 'credits'}{' '}
+                  {model.speed === 'fast' ? '⚡' : '🐢'}
                 </option>
               ))}
             </select>
+            {modelsError && <p className="mt-1 text-sm text-red-600">{modelsError}</p>}
           </div>
           {currentModel && (
             <div className="mt-2 rounded-md bg-purple-100 p-3">
@@ -245,7 +209,7 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
               </button>
             </div>
           </div>
-          {currentModel?.supportsNegativePrompt && (
+          {currentModel?.supports_negative_prompt && (
             <div>
               <label
                 htmlFor="negativePrompt"
@@ -285,7 +249,8 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
             <button
               type="button"
               onClick={handleGenerateClick}
-              className={`flex-1 rounded-md px-4 py-2 text-sm font-bold transition duration-300 md:text-base ${isLoggedIn ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-300 text-gray-600 hover:bg-gray-400'}`}
+              disabled={isLoading || !selectedModel}
+              className={`flex-1 rounded-md px-4 py-2 text-sm font-bold transition duration-300 disabled:opacity-50 md:text-base ${isLoggedIn ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-300 text-gray-600 hover:bg-gray-400'}`}
             >
               {isLoading ? 'Generating...' : 'Generate Image'}
             </button>
