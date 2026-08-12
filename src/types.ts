@@ -9,6 +9,52 @@ export interface TextToImageModel {
   description?: string;
 }
 
+/**
+ * Model catalog served by the backend at GET /api/models/.
+ *
+ * The roster lives in the backend's api/model_config.py and is the single source of
+ * truth -- do not hardcode model lists here. Adding, removing or repricing a model is
+ * a backend-only change that this app picks up on the next load.
+ */
+export interface FreeModel {
+  key: string;
+  label: string;
+  description: string;
+  repo: string;
+  providers: string[];
+  supports_negative_prompt: boolean;
+  speed: ModelSpeed;
+  tags: string[];
+}
+
+export interface PremiumModel {
+  key: string;
+  label: string;
+  description: string;
+  cost: number;
+  provider: string;
+  supports_negative_prompt: boolean;
+  speed: ModelSpeed;
+  tags: string[];
+}
+
+export interface EditModel {
+  key: string;
+  label: string;
+  cost: number;
+  provider: string;
+  supports_mask: boolean;
+  supports_multiple_images: boolean;
+  tags: string[];
+}
+
+export interface ModelCatalog {
+  free: FreeModel[];
+  premium: PremiumModel[];
+  edit: EditModel[];
+  arena_defaults: string[];
+}
+
 export interface GenerationLog {
   prompt: string;
   model: string;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import NSFWModal from './NSFWModal';
@@ -7,71 +7,7 @@ import InPageNavbar from './InPageNavbar';
 import axios from 'axios';
 import { HfInference } from '@huggingface/inference';
 import Tooltip from './Tooltip';
-import type { TextToImageModel } from '../types';
-
-const models: TextToImageModel[] = [
-  {
-    id: 'black-forest-labs/FLUX.1-schnell',
-    name: 'FLUX.1 Schnell (Great + Fast)',
-    supportsNegativePrompt: false,
-    speed: 'fast',
-  },
-  {
-    id: 'Qwen/Qwen-Image',
-    name: 'Qwen Image (Good + Fast)',
-    supportsNegativePrompt: true,
-    speed: 'fast',
-  },
-  {
-    id: 'Shakker-Labs/FLUX.1-dev-LoRA-Logo-Design',
-    name: 'FLUX.1 (dev) Logo Design (Makes logos)',
-    supportsNegativePrompt: false,
-    speed: 'slow',
-  },
-  {
-    id: 'black-forest-labs/FLUX.1-dev',
-    name: 'FLUX.1 (Great + Slow)',
-    supportsNegativePrompt: false,
-    speed: 'slow',
-  },
-  {
-    id: 'black-forest-labs/FLUX.1-Krea-dev',
-    name: 'FLUX.1 Krea (Great for realistic)',
-    supportsNegativePrompt: false,
-    speed: 'fast',
-  },
-  {
-    id: 'ByteDance/Hyper-SD',
-    name: 'Bytedance Hyper-SD',
-    supportsNegativePrompt: false,
-    speed: 'fast',
-  },
-  {
-    id: 'playgroundai/playground-v2.5-1024px-aesthetic',
-    name: 'Playground v2.5 Aesthetic',
-    supportsNegativePrompt: false,
-    speed: 'fast',
-  },
-  {
-    id: 'HiDream-ai/HiDream-I1-Full',
-    name: 'HiDream I1 (NEW) (Good at Prompt following)',
-    supportsNegativePrompt: false,
-    speed: 'fast',
-  },
-  {
-    id: 'UmeAiRT/FLUX.1-dev-LoRA-Modern_Pixel_art',
-    name: 'UmeAiRTFlux Pixel Art ',
-    supportsNegativePrompt: false,
-    speed: 'slow',
-  },
-  {
-    id: 'uriel353/photorealistic-nsfw',
-    name: 'Photorealistic NSFW Uncensored 🔥🔥🔥',
-    supportsNegativePrompt: false,
-    nsfw: true,
-    speed: 'slow',
-  },
-];
+import { useModelCatalog } from '../useModelCatalog';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
@@ -86,7 +22,7 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
 const FreeImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
   const [negativePrompt, setNegativePrompt] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>(models[0].id);
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showNSFWWarning, setShowNSFWWarning] = useState<boolean>(false);
@@ -96,12 +32,24 @@ const FreeImageGenerator: React.FC = () => {
   const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   const [isLoadingRandomPrompt, setIsLoadingRandomPrompt] = useState<boolean>(false);
 
+  const { catalog, isLoading: isLoadingModels, error: modelsError } = useModelCatalog();
+  // Memoised so the empty-array fallback doesn't produce a new reference each
+  // render, which would re-run the default-selection effect forever.
+  const models = useMemo(() => catalog?.free ?? [], [catalog]);
+
   useEffect(() => {
     const storedApiKey = localStorage.getItem('hfApiKey');
     if (storedApiKey) {
       setHfApiKey(storedApiKey);
     }
   }, []);
+
+  // Default to the first model the backend offers, once the catalog arrives.
+  useEffect(() => {
+    if (!selectedModel && models.length > 0) {
+      setSelectedModel(models[0].key);
+    }
+  }, [models, selectedModel]);
 
   const clearAllPrompts = (): void => {
     setPrompt('');
@@ -112,8 +60,8 @@ const FreeImageGenerator: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    const currentModel = models.find((model) => model.id === selectedModel);
-    if (currentModel?.nsfw) {
+    const currentModel = models.find((model) => model.key === selectedModel);
+    if (currentModel?.tags.includes('nsfw')) {
       setShowNSFWWarning(true);
     } else {
       await generateImage();
@@ -126,10 +74,14 @@ const FreeImageGenerator: React.FC = () => {
 
     try {
       if (hfApiKey) {
+        // Calling Hugging Face directly with the user's own key needs the repo id;
+        // the backend accepts either, so it gets the catalog key below.
+        const repo = models.find((model) => model.key === selectedModel)?.repo;
+        if (!repo) throw new Error('Unknown model selected');
         const hf = new HfInference(hfApiKey);
         const result = await hf.textToImage({
           inputs: prompt,
-          model: selectedModel,
+          model: repo,
           parameters: { negative_prompt: negativePrompt },
         });
         const imageUrl = await blobToDataUrl(result);
@@ -150,16 +102,26 @@ const FreeImageGenerator: React.FC = () => {
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error generating image:', error);
+      // DRF validation errors come back as a JSON array of strings, and the backend
+      // puts real explanations in there (out of monthly credits, unknown model), so
+      // show that rather than "Request failed with status code 400".
+      const data = error.response?.data;
+      const backendMessage: string | undefined = Array.isArray(data)
+        ? data[0]
+        : (data?.detail ?? data?.message);
+
       if (
         error.response &&
         error.response.status === 400 &&
-        error.response.data.message === 'The request to the external API timed out'
+        data?.message === 'The request to the external API timed out'
       ) {
         alert('The request to the image generator timed out, try again in one second.');
       } else if (error.response && error.response.status === 504) {
         alert(
           "The free image generator is taking too long to respond. This might work if you try again in a few seconds. Premium image generator doesn't have this problem."
         );
+      } else if (backendMessage) {
+        alert(backendMessage);
       } else {
         alert(
           `Error generating image: ${error.message}. ${hfApiKey ? 'Please check your Hugging Face API key.' : "This is probably not Max's fault. I would try again a few times before giving up. But I'm built different, so do you."}`
@@ -182,7 +144,7 @@ const FreeImageGenerator: React.FC = () => {
     setShowAPIKeySetup(false);
   };
 
-  const currentModel = models.find((model) => model.id === selectedModel);
+  const currentModel = models.find((model) => model.key === selectedModel);
 
   const generateRandomPrompt = async (): Promise<void> => {
     setIsLoadingRandomPrompt(true);
@@ -228,14 +190,20 @@ const FreeImageGenerator: React.FC = () => {
               id="model"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full rounded-md border-2 border-black p-2 text-sm"
+              disabled={isLoadingModels || models.length === 0}
+              className="w-full rounded-md border-2 border-black p-2 text-sm disabled:bg-gray-100"
             >
+              {isLoadingModels && <option>Loading models…</option>}
               {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name} {model.speed === 'fast' ? '⚡' : '🐢'}
+                <option key={model.key} value={model.key}>
+                  {model.label} {model.speed === 'fast' ? '⚡' : '🐢'}
                 </option>
               ))}
             </select>
+            {modelsError && <p className="mt-1 text-sm text-red-600">{modelsError}</p>}
+            {currentModel && (
+              <p className="mt-2 text-sm text-gray-600">{currentModel.description}</p>
+            )}
           </div>
           <div>
             <label htmlFor="prompt" className="mb-1 block text-sm font-bold text-gray-700">
@@ -288,7 +256,7 @@ const FreeImageGenerator: React.FC = () => {
               </div>
             </div>
           </div>
-          {currentModel?.supportsNegativePrompt && (
+          {currentModel?.supports_negative_prompt && (
             <div>
               <label
                 htmlFor="negativePrompt"
@@ -327,7 +295,7 @@ const FreeImageGenerator: React.FC = () => {
           <div className="flex space-x-4">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !selectedModel}
               className="flex-1 rounded-md bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-3 text-sm font-bold text-white shadow-md transition duration-300 hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 md:text-base"
             >
               {isLoading ? (
