@@ -13,6 +13,9 @@ const PremiumGenerator = React.lazy(() => import('./components/PremiumGenerator'
 const Gallery = React.lazy(() => import('./components/Gallery'));
 const Info = React.lazy(() => import('./components/Info'));
 const Home = React.lazy(() => import('./components/Home'));
+const Billing = React.lazy(() => import('./components/Billing'));
+const BillingSuccess = React.lazy(() => import('./components/BillingSuccess'));
+const BillingCancel = React.lazy(() => import('./components/BillingCancel'));
 
 function AppContent(): JSX.Element {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
@@ -60,6 +63,10 @@ function AppContent(): JSX.Element {
             element={<PremiumGenerator openAuthModal={handleOpenAuthModal} />}
           />
           <Route path="/gallery" element={<Gallery />} />
+          <Route path="/billing" element={<Billing openAuthModal={handleOpenAuthModal} />} />
+          {/* Stripe Checkout returns the browser to these two. */}
+          <Route path="/billing/success" element={<BillingSuccess />} />
+          <Route path="/billing/cancel" element={<BillingCancel />} />
           <Route path="/info" element={<Info />} />
           <Route path="/activate/:token" element={<ActivateAccount />} />
           <Route path="*" element={<Navigate to="/" replace />} />
