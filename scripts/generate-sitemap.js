@@ -12,6 +12,7 @@ const routes = [
   '/premium',
   '/gallery',
   '/info',
+  '/billing',
 ];
 
 function generateSitemapXml() {

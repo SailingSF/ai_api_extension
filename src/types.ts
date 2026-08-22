@@ -109,3 +109,71 @@ export interface NSFWModalProps {
   onConfirm: () => void;
   prompt: string;
 }
+
+/**
+ * Billing. The catalog is served by the backend at GET /api/billing/products/ and
+ * the registry lives in the backend's billing/products.py -- do not hardcode prices
+ * or product keys here. The client only ever sends a product *key*; the amount that
+ * gets charged is resolved server-side.
+ */
+export interface CreditPack {
+  key: string;
+  display_name: string;
+  credits: number;
+  price_usd: number;
+}
+
+export interface SubscriptionPlan {
+  key: string;
+  display_name: string;
+  tier: string;
+  monthly_credits: number;
+  price_usd: number;
+  interval: string;
+}
+
+export interface BillingCatalog {
+  credit_packs: CreditPack[];
+  subscription_plans: SubscriptionPlan[];
+}
+
+export interface AccountSubscription {
+  plan_key: string;
+  status: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+}
+
+/**
+ * GET /api/me/ -- the live balance. `credits` is the spendable total; the two
+ * buckets behind it differ in lifetime: `monthly_credits` is a subscription
+ * allowance that resets each billing cycle, `purchased_credits` comes from packs
+ * and never expires. Spending drains the monthly bucket first.
+ */
+export interface Account {
+  id: number;
+  email: string;
+  userdisplay_name: string;
+  tier: string;
+  is_email_verified: boolean;
+  credits: number;
+  monthly_credits: number;
+  purchased_credits: number;
+  subscription: AccountSubscription | null;
+}
+
+/**
+ * GET /api/billing/checkout-status/. `paid` and `fulfilled` are deliberately
+ * separate: Stripe returns the browser here the moment the card clears, but credits
+ * are granted by webhook a beat later. Poll until `fulfilled`.
+ */
+export interface CheckoutStatus {
+  session_id: string;
+  mode: string;
+  product_key: string;
+  status: string;
+  paid: boolean;
+  fulfilled: boolean;
+  credits_granted: number | null;
+  account: Account;
+}

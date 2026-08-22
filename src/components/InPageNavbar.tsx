@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   Grid,
   Info as InfoIcon,
+  CreditCard,
   LogIn,
   Menu,
   X,
@@ -110,6 +111,7 @@ const InPageNavbar: React.FC<InPageNavbarProps> = ({ pageColor }) => {
     { to: '/premium', icon: ImageIcon, text: 'Premium' },
     { to: '/gallery', icon: Grid, text: 'Gallery' },
     { to: '/info', icon: InfoIcon, text: 'Info' },
+    { to: '/billing', icon: CreditCard, text: 'Credits' },
   ];
 
   const handleOpenAuthModal = () => setIsAuthModalOpen(true);
