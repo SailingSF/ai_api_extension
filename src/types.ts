@@ -85,7 +85,6 @@ export interface ApiKeyContextValue {
 export interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthenticate: (success: boolean) => void;
   message?: string;
 }
 

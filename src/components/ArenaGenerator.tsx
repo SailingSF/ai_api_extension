@@ -1,24 +1,26 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import InPageNavbar from './InPageNavbar';
 import axios from 'axios';
 import ImageModal from './ImageModal';
-import type { ImageItem } from '../types';
+import CreditNotice from './CreditNotice';
+import { useAuth } from '../AuthContext';
+import { useModelCatalog } from '../useModelCatalog';
+import { SIGNUP_BONUS_CREDITS } from '../constants';
+import type { ImageItem, PremiumModel } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
-interface ArenaGeneratorProps {
-  openAuthModal: (message?: string) => void;
-}
-
-const ArenaGenerator: React.FC<ArenaGeneratorProps> = ({ openAuthModal }) => {
+const ArenaGenerator: React.FC = () => {
+  const { account, isLoggedIn, openAuthModal, logout, refresh } = useAuth();
+  const { catalog } = useModelCatalog();
   const [prompt, setPrompt] = useState<string>('');
   const [generatedImages, setGeneratedImages] = useState<ImageItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<ImageItem | null>(null);
   const [selectedWinner, setSelectedWinner] = useState<number | null>(null);
-  const navigate = useNavigate();
+  const [notice, setNotice] = useState<string | null>(null);
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>): Promise<void> => {
     if (e) e.preventDefault();
@@ -34,6 +36,7 @@ const ArenaGenerator: React.FC<ArenaGeneratorProps> = ({ openAuthModal }) => {
     }
 
     setIsLoading(true);
+    setNotice(null);
     try {
       const config = { headers: { Authorization: `Token ${token}` } };
       const response = await axios.post(`${API_BASE_URL}/api/arena-generate/`, { prompt }, config);
@@ -44,25 +47,31 @@ const ArenaGenerator: React.FC<ArenaGeneratorProps> = ({ openAuthModal }) => {
         created_at: new Date().toISOString(),
       }));
       setGeneratedImages(reshapedResults);
+      // An arena round spends credits across several models; re-read the balance so
+      // the navbar pill reflects it immediately.
+      void refresh();
     } catch (error: any) {
       if (error.response && error.response.status === 401) {
-        localStorage.removeItem('token');
-        navigate('/login');
+        // Go through the provider, not localStorage: clearing the key by hand leaves
+        // the navbar showing a balance for a session the server has already rejected.
+        // There is no /login route either -- the old redirect fell through to "*" and
+        // dumped the user on the home page with no explanation.
+        logout();
+        openAuthModal('Your session expired. Please log in again.');
       } else if (error.response && error.response.status === 403) {
-        openAuthModal(
-          "You don't have enough credits or are not at the right tier for this request."
-        );
+        // Report this next to the button, with a way to fix it. It used to open the
+        // login modal at a user who was already logged in.
+        void refresh();
+        setNotice("You don't have enough credits or aren't at the right tier for this request.");
       } else {
         // eslint-disable-next-line no-console
         console.error('Error generating images:', error);
-        openAuthModal(`Error generating images: ${error.message}`);
+        setNotice(`Error generating images: ${error.message}`);
       }
     } finally {
       setIsLoading(false);
     }
   };
-
-  const isLoggedIn = !!localStorage.getItem('token');
 
   const handleGenerateClick = (): void => {
     if (!isLoggedIn) {
@@ -95,6 +104,26 @@ const ArenaGenerator: React.FC<ArenaGeneratorProps> = ({ openAuthModal }) => {
       }
     }
   };
+
+  // A round costs the sum of its models, which is exactly what the backend charges:
+  // it validates every key against the same catalog the `premium` list is built from
+  // and adds up their costs. So this is derived, not a second hardcoded price list.
+  const arenaModels = useMemo<PremiumModel[] | null>(() => {
+    const defaults = catalog?.arena_defaults ?? [];
+    const premium = catalog?.premium ?? [];
+    if (defaults.length === 0) return null;
+    const resolved = defaults.map((key) => premium.find((model) => model.key === key));
+    // If any key is missing, quote nothing rather than a total that understates it.
+    return resolved.every((model): model is PremiumModel => model != null)
+      ? (resolved as PremiumModel[])
+      : null;
+  }, [catalog]);
+
+  const roundCost = arenaModels?.reduce((total, model) => total + model.cost, 0) ?? null;
+  const balance = account?.credits ?? 0;
+  // Fall back to the zero-balance check while the catalog is still loading.
+  const isOutOfCredits =
+    isLoggedIn && account != null && (roundCost != null ? balance < roundCost : balance <= 0);
 
   return (
     <div className="mx-auto w-full overflow-hidden rounded-xl border-4 border-black bg-white shadow-xl md:w-3/4">
@@ -129,17 +158,40 @@ const ArenaGenerator: React.FC<ArenaGeneratorProps> = ({ openAuthModal }) => {
               rows={3}
             />
           </div>
-          <button
-            type="button"
-            onClick={handleGenerateClick}
-            className={`w-full rounded-md px-4 py-2 text-sm font-bold transition duration-300 md:text-base ${isLoggedIn ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-300 text-gray-600 hover:bg-gray-400'}`}
-          >
-            {isLoading
-              ? 'Generating...'
-              : isLoggedIn
-                ? 'Generate Images'
-                : 'Login to Generate Images'}
-          </button>
+          {notice && (
+            <CreditNotice tone="error" showBuyLink={isOutOfCredits}>
+              {notice}
+            </CreditNotice>
+          )}
+          {isOutOfCredits && !notice && (
+            <CreditNotice tone="credits" showBuyLink>
+              {roundCost != null && arenaModels != null
+                ? `A round runs your prompt through ${arenaModels.length} models and costs ${roundCost} credits. You have ${balance}.`
+                : "You're out of credits. An arena round runs your prompt through several models at once."}
+            </CreditNotice>
+          )}
+          {isOutOfCredits ? (
+            <Link
+              to="/billing"
+              className="block w-full rounded-md bg-emerald-500 px-4 py-2 text-center text-sm font-bold text-white transition duration-300 hover:bg-emerald-600 md:text-base"
+            >
+              Top up to enter the Arena
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handleGenerateClick}
+              className={`w-full rounded-md px-4 py-2 text-sm font-bold transition duration-300 md:text-base ${isLoggedIn ? 'bg-black text-white hover:bg-gray-800' : 'bg-amber-400 text-black hover:bg-amber-500'}`}
+            >
+              {isLoading
+                ? 'Generating...'
+                : !isLoggedIn
+                  ? `Log in to generate — ${SIGNUP_BONUS_CREDITS} free credits`
+                  : roundCost != null
+                    ? `Generate Images · ${roundCost} credits`
+                    : 'Generate Images'}
+            </button>
+          )}
         </form>
       </div>
       <div className="bg-stone-100 p-6">

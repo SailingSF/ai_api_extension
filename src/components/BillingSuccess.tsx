@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Clock, XCircle } from 'lucide-react';
 import InPageNavbar from './InPageNavbar';
+import { useAuth } from '../AuthContext';
 import type { CheckoutStatus } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
@@ -15,6 +16,7 @@ const POLL_INTERVAL_MS = 1500;
 const MAX_ATTEMPTS = 20; // ~30s
 
 const BillingSuccess: React.FC = () => {
+  const { refresh } = useAuth();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
 
@@ -33,13 +35,16 @@ const BillingSuccess: React.FC = () => {
         { params: { session_id: sessionId }, headers: { Authorization: `Token ${token}` } }
       );
       setStatus(response.data);
+      // Once the webhook has landed, pull the shared account through so the navbar
+      // pill shows the topped-up balance without waiting for a navigation.
+      if (response.data.fulfilled) void refresh();
       // Stop once we've applied it, or once Stripe says the session will never pay.
       return response.data.fulfilled || response.data.status === 'expired';
     } catch {
       setError('Could not confirm your purchase.');
       return true;
     }
-  }, [sessionId]);
+  }, [sessionId, refresh]);
 
   useEffect(() => {
     if (!sessionId) return;

@@ -8,6 +8,8 @@ import axios from 'axios';
 import { HfInference } from '@huggingface/inference';
 import Tooltip from './Tooltip';
 import { useModelCatalog } from '../useModelCatalog';
+import { useAuth } from '../AuthContext';
+import { SIGNUP_BONUS_CREDITS } from '../constants';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
@@ -20,6 +22,7 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
   });
 
 const FreeImageGenerator: React.FC = () => {
+  const { isLoggedIn, openAuthModal } = useAuth();
   const [prompt, setPrompt] = useState<string>('');
   const [negativePrompt, setNegativePrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
@@ -145,6 +148,12 @@ const FreeImageGenerator: React.FC = () => {
   };
 
   const currentModel = models.find((model) => model.key === selectedModel);
+
+  // Quoted from the catalog, never hardcoded: the backend owns model pricing.
+  const premiumModels = catalog?.premium ?? [];
+  const cheapestPremiumCost = premiumModels.length
+    ? Math.min(...premiumModels.map((model) => model.cost))
+    : null;
 
   const generateRandomPrompt = async (): Promise<void> => {
     setIsLoadingRandomPrompt(true);
@@ -357,6 +366,41 @@ const FreeImageGenerator: React.FC = () => {
               height={1024}
               className="mx-auto h-auto max-w-full rounded-md border-2 border-black shadow-lg"
             />
+            {/* The moment right after a free generation is when "faster, and better"
+                actually lands -- there's a result on screen to compare it against. */}
+            <div className="mx-auto mt-6 max-w-xl rounded-lg border-2 border-purple-300 bg-purple-50 p-4">
+              <p className="text-center text-sm font-bold text-purple-900">
+                Want it faster, without the queue?
+              </p>
+              <p className="mt-1 text-center text-sm text-purple-800">
+                Premium models generate in seconds and optimise your prompt for you
+                {cheapestPremiumCost != null && (
+                  <>
+                    {' '}
+                    — from {cheapestPremiumCost} {cheapestPremiumCost === 1 ? 'credit' : 'credits'}{' '}
+                    an image
+                  </>
+                )}
+                .
+              </p>
+              <div className="mt-3 flex flex-col justify-center gap-2 sm:flex-row">
+                <Link
+                  to="/premium"
+                  className="rounded-md border-2 border-black bg-purple-500 px-4 py-2 text-center text-sm font-bold text-white transition duration-300 hover:bg-purple-600"
+                >
+                  Try a premium model
+                </Link>
+                {!isLoggedIn && (
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('Create an account to try premium models.')}
+                    className="rounded-md border-2 border-black bg-amber-400 px-4 py-2 text-sm font-bold text-black transition duration-300 hover:bg-amber-500"
+                  >
+                    Get {SIGNUP_BONUS_CREDITS} free credits
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="mt-6 text-center">
               <Link
                 to="/gallery"

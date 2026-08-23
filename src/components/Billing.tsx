@@ -3,22 +3,17 @@ import axios from 'axios';
 import { Helmet } from 'react-helmet-async';
 import { CreditCard, Settings, Sparkles } from 'lucide-react';
 import InPageNavbar from './InPageNavbar';
-import { useAccount } from '../useAccount';
+import { useAuth } from '../AuthContext';
+import { SIGNUP_BONUS_CREDITS } from '../constants';
 import type { BillingCatalog, CreditPack, SubscriptionPlan } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
-interface BillingProps {
-  openAuthModal: (message?: string) => void;
-}
-
-const Billing: React.FC<BillingProps> = ({ openAuthModal }) => {
-  const { account, isLoading: isLoadingAccount } = useAccount();
+const Billing: React.FC = () => {
+  const { account, isLoadingAccount, isLoggedIn, openAuthModal } = useAuth();
   const [catalog, setCatalog] = useState<BillingCatalog | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const isLoggedIn = !!localStorage.getItem('token');
 
   // The catalog is public, so it renders for signed-out visitors too -- the pricing
   // page doubles as marketing.
@@ -130,6 +125,23 @@ const Billing: React.FC<BillingProps> = ({ openAuthModal }) => {
             ) : (
               <p className="text-sm text-gray-500">Could not load your balance.</p>
             )}
+          </div>
+        )}
+
+        {/* Signed-out visitors see the pricing page as marketing; point out that they
+            don't have to pay to start. */}
+        {!isLoggedIn && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-black bg-amber-50 p-4">
+            <p className="text-sm font-bold text-amber-900">
+              New here? Create an account and get {SIGNUP_BONUS_CREDITS} free credits — no card
+              needed.
+            </p>
+            <button
+              onClick={() => openAuthModal('Create an account to get started.')}
+              className="rounded-md border-2 border-black bg-amber-400 px-4 py-2 text-sm font-bold text-black hover:bg-amber-500"
+            >
+              Get free credits
+            </button>
           </div>
         )}
 
