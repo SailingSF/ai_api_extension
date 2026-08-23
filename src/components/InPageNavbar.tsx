@@ -9,11 +9,12 @@ import {
   Grid,
   Info as InfoIcon,
   CreditCard,
-  LogIn,
+  LogOut,
   Menu,
   X,
 } from 'lucide-react';
-import AuthModal from './AuthModal';
+import AccountNav from './AccountNav';
+import { useAuth } from '../AuthContext';
 
 interface NavItemProps {
   to?: string;
@@ -62,6 +63,8 @@ interface MobileMenuProps {
   activeColor: string;
   location: ReturnType<typeof useLocation>;
   onItemClick: () => void;
+  isLoggedIn: boolean;
+  onLogout: () => void;
 }
 
 const MobileMenu: React.FC<MobileMenuProps> = ({
@@ -69,6 +72,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   activeColor,
   location,
   onItemClick,
+  isLoggedIn,
+  onLogout,
 }) => (
   <div className="z-50 bg-white shadow-md">
     {navItems.map((item) => (
@@ -84,6 +89,20 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         {item.text}
       </NavItem>
     ))}
+    {/* Signing out lives in the drawer on mobile; the balance keeps the header slot. */}
+    {isLoggedIn && (
+      <NavItem
+        icon={LogOut}
+        activeColor={activeColor}
+        onClick={() => {
+          onItemClick();
+          onLogout();
+        }}
+        isMobile
+      >
+        Log out
+      </NavItem>
+    )}
   </div>
 );
 
@@ -93,7 +112,7 @@ interface InPageNavbarProps {
 
 const InPageNavbar: React.FC<InPageNavbarProps> = ({ pageColor }) => {
   const location = useLocation();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const { isLoggedIn, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
@@ -114,81 +133,58 @@ const InPageNavbar: React.FC<InPageNavbarProps> = ({ pageColor }) => {
     { to: '/billing', icon: CreditCard, text: 'Credits' },
   ];
 
-  const handleOpenAuthModal = () => setIsAuthModalOpen(true);
-  const handleCloseAuthModal = () => setIsAuthModalOpen(false);
-  const handleAuthenticate = () => setIsAuthModalOpen(false);
   const toggleMobileMenu = () => setIsMobileMenuOpen((o) => !o);
 
   return (
-    <>
-      <nav className="rounded-t-xl bg-white shadow-md">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            {isMobile ? (
-              <>
-                <div className="flex items-center">
-                  <button onClick={toggleMobileMenu} className="mr-2 text-gray-700">
-                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                  </button>
-                  <span className="text-xl font-bold">Menu</span>
-                </div>
-                <div className="flex w-24 justify-end">
+    <nav className="rounded-t-xl bg-white shadow-md">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          {isMobile ? (
+            <>
+              <div className="flex items-center">
+                <button onClick={toggleMobileMenu} className="mr-2 text-gray-700">
+                  {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+                <span className="text-xl font-bold">Menu</span>
+              </div>
+              <AccountNav isMobile />
+            </>
+          ) : (
+            <>
+              {/* Mirrors the account slot so the links stay optically centred. */}
+              <div className="w-36" />
+              <div className="flex flex-grow items-center justify-center space-x-2">
+                {navItems.map((item) => (
                   <NavItem
-                    icon={LogIn}
-                    onClick={handleOpenAuthModal}
-                    activeColor={pageColor}
-                    isMobile
-                  >
-                    Login
-                  </NavItem>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="w-24" />
-                <div className="flex flex-grow items-center justify-center space-x-2">
-                  {navItems.map((item) => (
-                    <NavItem
-                      key={item.to}
-                      to={item.to}
-                      icon={item.icon}
-                      isActive={location.pathname === item.to}
-                      activeColor={pageColor}
-                      isMobile={false}
-                    >
-                      {item.text}
-                    </NavItem>
-                  ))}
-                </div>
-                <div className="flex w-24 justify-end">
-                  <NavItem
-                    icon={LogIn}
-                    onClick={handleOpenAuthModal}
+                    key={item.to}
+                    to={item.to}
+                    icon={item.icon}
+                    isActive={location.pathname === item.to}
                     activeColor={pageColor}
                     isMobile={false}
                   >
-                    Login
+                    {item.text}
                   </NavItem>
-                </div>
-              </>
-            )}
-          </div>
+                ))}
+              </div>
+              <div className="flex w-36 justify-end">
+                <AccountNav isMobile={false} />
+              </div>
+            </>
+          )}
         </div>
-        {isMobile && isMobileMenuOpen && (
-          <MobileMenu
-            navItems={navItems}
-            activeColor={pageColor}
-            location={location}
-            onItemClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
-      </nav>
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={handleCloseAuthModal}
-        onAuthenticate={handleAuthenticate}
-      />
-    </>
+      </div>
+      {isMobile && isMobileMenuOpen && (
+        <MobileMenu
+          navItems={navItems}
+          activeColor={pageColor}
+          location={location}
+          onItemClick={() => setIsMobileMenuOpen(false)}
+          isLoggedIn={isLoggedIn}
+          onLogout={logout}
+        />
+      )}
+    </nav>
   );
 };
 

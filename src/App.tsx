@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -6,6 +6,7 @@ import AuthModal from './components/AuthModal';
 import ActivateAccount from './components/ActivateAccount';
 import usePageTracking from './usePageTracking';
 import LoadingSpinner from './components/LoadingSpinner';
+import { AuthProvider, useAuth } from './AuthContext';
 
 const ArenaGenerator = React.lazy(() => import('./components/ArenaGenerator'));
 const FreeImageGenerator = React.lazy(() => import('./components/FreeImageGenerator'));
@@ -18,28 +19,11 @@ const BillingSuccess = React.lazy(() => import('./components/BillingSuccess'));
 const BillingCancel = React.lazy(() => import('./components/BillingCancel'));
 
 function AppContent(): JSX.Element {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [authModalMessage, setAuthModalMessage] = useState<string>('');
+  // One modal for the whole app: the navbar used to mount a second copy of its own,
+  // so which instance you were looking at depended on where you clicked.
+  const { isAuthModalOpen, authModalMessage, closeAuthModal } = useAuth();
 
   usePageTracking();
-
-  const handleOpenAuthModal = (message: string = ''): void => {
-    setAuthModalMessage(message);
-    setIsAuthModalOpen(true);
-  };
-
-  const handleLogout = (): void => {
-    localStorage.removeItem('token');
-    // Intentionally keep console for developer feedback
-    // eslint-disable-next-line no-console
-    console.log('User logged out');
-  };
-
-  const handleAuthenticate = (success: boolean): void => {
-    if (success) {
-      setIsAuthModalOpen(false);
-    }
-  };
 
   return (
     <div className="App min-h-screen bg-gradient-to-br from-purple-400 to-indigo-600 p-4 font-sans sm:p-8">
@@ -52,18 +36,12 @@ function AppContent(): JSX.Element {
       </Helmet>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
-          <Route
-            path="/"
-            element={<Home onOpenAuthModal={handleOpenAuthModal} onLogout={handleLogout} />}
-          />
-          <Route path="/arena" element={<ArenaGenerator openAuthModal={handleOpenAuthModal} />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/arena" element={<ArenaGenerator />} />
           <Route path="/generate" element={<FreeImageGenerator />} />
-          <Route
-            path="/premium"
-            element={<PremiumGenerator openAuthModal={handleOpenAuthModal} />}
-          />
+          <Route path="/premium" element={<PremiumGenerator />} />
           <Route path="/gallery" element={<Gallery />} />
-          <Route path="/billing" element={<Billing openAuthModal={handleOpenAuthModal} />} />
+          <Route path="/billing" element={<Billing />} />
           {/* Stripe Checkout returns the browser to these two. */}
           <Route path="/billing/success" element={<BillingSuccess />} />
           <Route path="/billing/cancel" element={<BillingCancel />} />
@@ -72,12 +50,7 @@ function AppContent(): JSX.Element {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuthenticate={handleAuthenticate}
-        message={authModalMessage}
-      />
+      <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} message={authModalMessage} />
     </div>
   );
 }
@@ -89,7 +62,9 @@ function App(): JSX.Element {
 
   return (
     <Router>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 }

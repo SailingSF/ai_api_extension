@@ -1,18 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import InPageNavbar from './InPageNavbar';
 import NSFWModal from './NSFWModal';
+import CreditNotice from './CreditNotice';
 import axios from 'axios';
 import { useModelCatalog } from '../useModelCatalog';
+import { useAuth } from '../AuthContext';
+import { SIGNUP_BONUS_CREDITS } from '../constants';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
-interface PremiumGeneratorProps {
-  openAuthModal: (message?: string) => void;
-}
-
-const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) => {
+const PremiumGenerator: React.FC = () => {
+  const { account, isLoggedIn, openAuthModal, logout, refresh } = useAuth();
   const [prompt, setPrompt] = useState<string>('');
   const [negativePrompt, setNegativePrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
@@ -20,8 +20,8 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
   const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showNSFWWarning, setShowNSFWWarning] = useState<boolean>(false);
-  const navigate = useNavigate();
   const [isLoadingRandomPrompt, setIsLoadingRandomPrompt] = useState<boolean>(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const { catalog, isLoading: isLoadingModels, error: modelsError } = useModelCatalog();
   // Memoised so the empty-array fallback doesn't produce a new reference each
@@ -40,9 +40,8 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
     setNegativePrompt('');
     setImprovedPrompt(null);
     setGeneratedImageUrl(null);
+    setNotice(null);
   };
-
-  const isLoggedIn = !!localStorage.getItem('token');
 
   const handleGenerateClick = (): void => {
     if (!isLoggedIn) {
@@ -70,6 +69,7 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
   const generateImage = async (): Promise<void> => {
     setIsLoading(true);
     setShowNSFWWarning(false);
+    setNotice(null);
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -91,13 +91,24 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
       );
       setGeneratedImageUrl(response.data.image_url);
       setImprovedPrompt(response.data.improved_prompt ?? null);
+      // The generation just spent credits; pull the new balance so the navbar pill
+      // ticks down instead of showing what the user had a moment ago.
+      void refresh();
     } catch (error: any) {
       if (error.response && error.response.status === 401) {
-        localStorage.removeItem('token');
-        navigate('/login');
+        // Go through the provider, not localStorage: clearing the key by hand leaves
+        // the navbar showing a balance for a session the server has already rejected.
+        // There is no /login route either -- the old redirect fell through to "*" and
+        // dumped the user on the home page with no explanation.
+        logout();
+        openAuthModal('Your session expired. Please log in again.');
       } else if (error.response && error.response.status === 403) {
-        openAuthModal(
-          "You don't have enough credits or are not at the right membership tier for this request."
+        // Out of credits, or the wrong tier. Say so where the button is and offer
+        // the fix -- sending this to the login modal asked a signed-in user to sign
+        // in again. Refresh so the balance on screen matches the refusal.
+        void refresh();
+        setNotice(
+          "You don't have enough credits or aren't on the right membership tier for this request."
         );
       } else {
         // eslint-disable-next-line no-console
@@ -108,7 +119,7 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
         const backendMessage: string | undefined = Array.isArray(data)
           ? data[0]
           : (data?.detail ?? data?.message);
-        openAuthModal(
+        setNotice(
           backendMessage ??
             `Error generating image: ${error.message}. This is probably not Max's fault. I would try again a few times before giving up. But I'm built different, so do you.`
         );
@@ -134,6 +145,20 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
   };
 
   const currentModel = models.find((model) => model.key === selectedModel);
+  const cost = currentModel?.cost ?? 0;
+  const balance = account?.credits ?? 0;
+  // Only claim someone can't afford it once the account has actually loaded --
+  // otherwise a slow /api/me/ would block the button on a balance we don't know yet.
+  const cannotAfford = isLoggedIn && account != null && cost > 0 && balance < cost;
+
+  const generateLabel = (): string => {
+    if (isLoading) return 'Generating...';
+    if (!isLoggedIn) return `Log in to generate — ${SIGNUP_BONUS_CREDITS} free credits`;
+    if (cannotAfford) return 'Not enough credits';
+    return cost > 0
+      ? `Generate Image · ${cost} ${cost === 1 ? 'credit' : 'credits'}`
+      : 'Generate Image';
+  };
 
   return (
     <div className="mx-auto w-full overflow-hidden rounded-xl border-4 border-black bg-white shadow-xl md:w-3/4">
@@ -245,15 +270,35 @@ const PremiumGenerator: React.FC<PremiumGeneratorProps> = ({ openAuthModal }) =>
               />
             </div>
           )}
+          {notice && (
+            <CreditNotice tone="error" showBuyLink={cannotAfford || balance <= 0}>
+              {notice}
+            </CreditNotice>
+          )}
+          {cannotAfford && !notice && (
+            <CreditNotice tone="credits" showBuyLink>
+              {currentModel?.label} costs {cost} {cost === 1 ? 'credit' : 'credits'} and you have{' '}
+              {balance}.
+            </CreditNotice>
+          )}
           <div className="flex space-x-4">
-            <button
-              type="button"
-              onClick={handleGenerateClick}
-              disabled={isLoading || !selectedModel}
-              className={`flex-1 rounded-md px-4 py-2 text-sm font-bold transition duration-300 disabled:opacity-50 md:text-base ${isLoggedIn ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-300 text-gray-600 hover:bg-gray-400'}`}
-            >
-              {isLoading ? 'Generating...' : 'Generate Image'}
-            </button>
+            {cannotAfford ? (
+              <Link
+                to="/billing"
+                className="flex-1 rounded-md bg-emerald-500 px-4 py-2 text-center text-sm font-bold text-white transition duration-300 hover:bg-emerald-600 md:text-base"
+              >
+                Top up to generate
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={handleGenerateClick}
+                disabled={isLoading || !selectedModel}
+                className={`flex-1 rounded-md px-4 py-2 text-sm font-bold transition duration-300 disabled:opacity-50 md:text-base ${isLoggedIn ? 'bg-black text-white hover:bg-gray-800' : 'bg-amber-400 text-black hover:bg-amber-500'}`}
+              >
+                {generateLabel()}
+              </button>
+            )}
             <button
               type="button"
               onClick={clearAllPrompts}

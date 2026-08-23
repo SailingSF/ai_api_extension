@@ -27,6 +27,7 @@ Requires a local `.env` (gitignored) with:
 - **SEO**: per-page `<title>`/meta use `react-helmet-async`; `HelmetProvider` wraps the app in `src/index.tsx`.
 - Shared TypeScript interfaces live in `src/types.ts`.
 - Auth is a **DRF token** in `localStorage` under `token`, sent as `Authorization: Token <key>` (not a JWT, despite the name). Activation happens via the `/activate/:token` route.
+- **Auth state comes from `useAuth()`** (`src/AuthContext.tsx`), not from reading `localStorage` during render. `<AuthProvider>` wraps the app in `src/App.tsx` and owns the token, the live account, and the single `AuthModal`. Reading the token at render time is not reactive — logging in would leave the rest of the page believing the user was signed out until the next navigation. Use `login(token)` rather than writing `localStorage` yourself; that is what updates the navbar balance.
 - **Billing and credits** have their own section below — read it before touching anything that displays a balance.
 - The GA4 measurement ID is hardcoded in `src/App.tsx`.
 - Formatting is Prettier (`.prettierrc.json`): single quotes, semicolons, 2-space indent, 100-col, `trailingComma: es5`. `prettier-plugin-tailwindcss` auto-sorts Tailwind classes, so don't hand-order `className` strings. Correctness linting is CRA's built-in `react-app` ESLint, with `eslint-config-prettier` disabling formatting rules that conflict.
@@ -42,10 +43,15 @@ the result back over the API.
 `AuthModal` stashes a `credits` value in `localStorage` at login. It is a **snapshot**
 and goes stale the moment the user generates an image or buys a pack.
 
-Use `useAccount()` (`src/useAccount.ts`), which reads `GET /api/me/`, and call its
-`refresh()` after anything that moves credits — a generation, a purchase. It keeps
-the `localStorage` copy in step for older code still reading it, and treats a 401 as
-signed-out rather than leaving a stale number on screen.
+Use `useAccount()` (`src/useAccount.ts`) or `useAuth()` directly, which read
+`GET /api/me/` through `<AuthProvider>`, and call `refresh()` after anything that
+moves credits — a generation, a purchase. The provider keeps the `localStorage` copy
+in step for older code still reading it, and drops the token on a 401 rather than
+leaving a stale number on screen.
+
+The balance is on screen in more than one place now — the navbar pill
+(`src/components/AccountNav.tsx`), the `/billing` card, and the home hero — so a
+generation that doesn't call `refresh()` leaves several stale numbers, not one.
 
 ### Two buckets, different lifetimes
 
@@ -76,6 +82,12 @@ be hardcoded here** — same contract as the model catalog. Checkout POSTs only 
 `product_key`; the amount charged is resolved server-side, so repricing is a
 backend-only change this app picks up on the next load.
 
+Model costs shown in the generators follow the same rule — they come from
+`GET /api/models/`. The Arena quotes the sum of its `arena_defaults` costs because
+that is literally what `generate_arena_images` charges (it adds up the same
+`APPROVED_MODELS` costs the `premium` list is built from). If a default ever stops
+resolving in that list, `ArenaGenerator` quotes nothing rather than a wrong total.
+
 ### The webhook race
 
 Stripe redirects to `/billing/success` the moment the card clears, but credits are
@@ -91,6 +103,22 @@ and the webhook will still land.
 
 Keep that distinction if you touch this page. Collapsing `paid` and `fulfilled` into
 one boolean reintroduces the bug.
+
+### Out of credits is not an auth problem
+
+A 403 from a generator means "not enough credits or wrong tier". Report it inline
+with `CreditNotice` next to the button that failed, and give it a link to `/billing`.
+It used to be passed to `openAuthModal()`, which showed a **login form to a user who
+was already logged in** and offered no way to buy anything. Reserve the auth modal
+for people who are genuinely signed out.
+
+### The signup bonus is mirrored, not fetched
+
+`SIGNUP_BONUS_CREDITS` in `src/constants.ts` is the one place the new-account bonus
+is written down, and it is quoted in the register form, the navbar, the home hero,
+the signed-out generate buttons and `/billing`. The backend owns the real number; if
+the API ever reports it, read it from there and delete the constant — the same
+contract as prices and model costs.
 
 ### Local development gotcha
 

@@ -8,11 +8,14 @@ import {
   Image as ImageIcon,
   Grid,
   LogIn,
-  LogOut,
   Info as InfoIcon,
+  Zap,
+  CreditCard,
 } from 'lucide-react';
 import axios from 'axios';
 import ImageModal from './ImageModal';
+import { useAuth } from '../AuthContext';
+import { LOW_CREDIT_THRESHOLD, SIGNUP_BONUS_CREDITS } from '../constants';
 import type { ImageItem } from '../types';
 
 interface ButtonProps {
@@ -84,12 +87,8 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ title, description, icon: Ico
   </motion.div>
 );
 
-interface HomeProps {
-  onLogout: () => void;
-  onOpenAuthModal: () => void;
-}
-
-const Home: React.FC<HomeProps> = ({ onLogout, onOpenAuthModal }) => {
+const Home: React.FC = () => {
+  const { account, isLoggedIn, openAuthModal } = useAuth();
   const [topImage, setTopImage] = useState<ImageItem | null>(null);
   const [showImageModal, setShowImageModal] = useState<boolean>(false);
 
@@ -107,9 +106,8 @@ const Home: React.FC<HomeProps> = ({ onLogout, onOpenAuthModal }) => {
     fetchTopImage();
   }, []);
 
-  const handleOpenAuthModal = (): void => {
-    onOpenAuthModal();
-  };
+  const credits = account?.credits ?? 0;
+  const isLow = account != null && credits <= LOW_CREDIT_THRESHOLD;
 
   return (
     <div className="mx-auto w-full rounded-xl border-4 border-black bg-white p-6 shadow-xl md:w-3/4">
@@ -250,39 +248,81 @@ const Home: React.FC<HomeProps> = ({ onLogout, onOpenAuthModal }) => {
         transition={{ delay: 0.3 }}
         className="mt-8 rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-6"
       >
-        <h3 className="mb-4 text-center text-xl font-bold">Unlock Premium Features</h3>
-        <div className="mb-4 space-y-2">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="text-amber-500" size={20} />
-            <p className="text-gray-700">Access faster premium AI models</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <LandPlot className="text-amber-500" size={20} />
-            <p className="text-gray-700">Compare models side-by-side in The Arena</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Grid className="text-amber-500" size={20} />
-            <p className="text-gray-700">Upvote your favorite generations</p>
-          </div>
-        </div>
+        {/* This panel used to offer Login and Logout side by side to everyone. It now
+            says the thing that's actually useful for the state you're in: what you get
+            by signing up, or what you have left to spend. */}
+        {isLoggedIn ? (
+          <>
+            <h3 className="mb-4 text-center text-xl font-bold">
+              {isLow ? "You're running low" : 'Ready when you are'}
+            </h3>
+            <div className="mb-4 flex items-center justify-center gap-2">
+              {account == null ? (
+                // Signed in but /api/me/ hasn't answered yet -- don't flash a zero at
+                // someone who has credits.
+                <span className="h-8 w-24 animate-pulse rounded bg-amber-200" />
+              ) : (
+                <>
+                  <Zap className="fill-current text-amber-500" size={24} />
+                  <span className="text-3xl font-bold text-gray-800">{credits}</span>
+                  <span className="text-gray-700">{credits === 1 ? 'credit' : 'credits'}</span>
+                </>
+              )}
+            </div>
+            <p className="mb-4 text-center text-gray-700">
+              {isLow
+                ? 'Top up to keep comparing models and running premium generations.'
+                : 'Spend them in The Arena or on a premium model.'}
+            </p>
+            <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
+              <Button
+                to="/billing"
+                className="flex-1 bg-amber-400 text-black ring-4 ring-yellow-400 ring-opacity-50 hover:bg-amber-500"
+                icon={CreditCard}
+                primary
+              >
+                Buy Credits
+              </Button>
+              <Button
+                to="/premium"
+                className="flex-1 bg-purple-500 text-white hover:bg-purple-600"
+                icon={ImageIcon}
+              >
+                Generate Something
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="mb-2 text-center text-xl font-bold">Unlock Premium Features</h3>
+            <p className="mb-4 text-center font-medium text-amber-800">
+              New accounts start with {SIGNUP_BONUS_CREDITS} free credits.
+            </p>
+            <div className="mb-4 space-y-2">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="text-amber-500" size={20} />
+                <p className="text-gray-700">Access faster premium AI models</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <LandPlot className="text-amber-500" size={20} />
+                <p className="text-gray-700">Compare models side-by-side in The Arena</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Grid className="text-amber-500" size={20} />
+                <p className="text-gray-700">Upvote your favorite generations</p>
+              </div>
+            </div>
 
-        <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
-          <Button
-            onClick={handleOpenAuthModal}
-            className="flex-1 bg-amber-400 text-black ring-4 ring-yellow-400 ring-opacity-50 hover:bg-amber-500"
-            icon={LogIn}
-            primary
-          >
-            Login to Get Started
-          </Button>
-          <Button
-            onClick={onLogout}
-            className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300"
-            icon={LogOut}
-          >
-            Logout
-          </Button>
-        </div>
+            <Button
+              onClick={() => openAuthModal()}
+              className="bg-amber-400 text-black ring-4 ring-yellow-400 ring-opacity-50 hover:bg-amber-500"
+              icon={LogIn}
+              primary
+            >
+              Get {SIGNUP_BONUS_CREDITS} Free Credits
+            </Button>
+          </>
+        )}
       </motion.div>
 
       <motion.div

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { ThumbsUp } from 'lucide-react';
+import { useAuth } from '../AuthContext';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
@@ -11,6 +12,7 @@ interface UpvoteButtonProps {
 }
 
 const UpvoteButton: React.FC<UpvoteButtonProps> = ({ imageId, initialVotes = 0, onVoteUpdate }) => {
+  const { openAuthModal } = useAuth();
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [votes, setVotes] = useState<number>(initialVotes);
 
@@ -20,7 +22,8 @@ const UpvoteButton: React.FC<UpvoteButtonProps> = ({ imageId, initialVotes = 0, 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please log in to upvote images.');
+        // An alert() dead-ends here; the modal lets them vote without losing the page.
+        openAuthModal('Log in to upvote images.');
         return;
       }
 
@@ -44,7 +47,7 @@ const UpvoteButton: React.FC<UpvoteButtonProps> = ({ imageId, initialVotes = 0, 
     } catch (error: any) {
       if (error?.response) {
         if (error.response.status === 401) {
-          alert('Please log in to upvote images.');
+          openAuthModal('Log in to upvote images.');
         } else if (error.response.status === 429) {
           setHasVoted(true);
         } else {
