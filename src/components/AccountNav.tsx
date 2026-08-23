@@ -6,7 +6,7 @@ import { useAuth } from '../AuthContext';
 import { LOW_CREDIT_THRESHOLD, SIGNUP_BONUS_CREDITS } from '../constants';
 
 /**
- * Colour is the signal here, not decoration: emerald means you can generate, amber
+ * Color indicates the balance: emerald means you can generate, amber
  * means you're nearly out, rose means the next click will fail. It saves the user
  * discovering their balance from a 403.
  */

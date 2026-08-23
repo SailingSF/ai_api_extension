@@ -126,7 +126,7 @@ const InPageNavbar: React.FC<InPageNavbarProps> = ({ pageColor }) => {
   const navItems = [
     { to: '/', icon: HomeIcon, text: 'Home' },
     { to: '/arena', icon: LandPlot, text: 'Arena' },
-    { to: '/generate', icon: Sparkles, text: 'Free Generator' },
+    { to: '/generate', icon: Sparkles, text: 'Free' },
     { to: '/premium', icon: ImageIcon, text: 'Premium' },
     { to: '/gallery', icon: Grid, text: 'Gallery' },
     { to: '/info', icon: InfoIcon, text: 'Info' },
