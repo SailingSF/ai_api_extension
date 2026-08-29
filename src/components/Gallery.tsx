@@ -130,7 +130,13 @@ const Gallery: React.FC = () => {
           <ImageModal
             image={selectedImage}
             onClose={() => setSelectedImage(null)}
-            customButton={<EditImageButton imageUrl={selectedImage.url} />}
+            customButton={
+              // Every gallery row is serialized with an id; the type allows it to be
+              // absent, so don't offer an edit we couldn't submit.
+              selectedImage.id != null ? (
+                <EditImageButton imageId={selectedImage.id} imageUrl={selectedImage.url} />
+              ) : undefined
+            }
           />
         )}
       </div>

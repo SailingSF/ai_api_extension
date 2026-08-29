@@ -18,6 +18,8 @@ const PremiumGenerator: React.FC = () => {
   const [negativePrompt, setNegativePrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  // Kept so the result can be sent to the editor by reference rather than by url.
+  const [generatedImageId, setGeneratedImageId] = useState<number | null>(null);
   const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showNSFWWarning, setShowNSFWWarning] = useState<boolean>(false);
@@ -41,6 +43,7 @@ const PremiumGenerator: React.FC = () => {
     setNegativePrompt('');
     setImprovedPrompt(null);
     setGeneratedImageUrl(null);
+    setGeneratedImageId(null);
     setNotice(null);
   };
 
@@ -91,6 +94,7 @@ const PremiumGenerator: React.FC = () => {
         config
       );
       setGeneratedImageUrl(response.data.image_url);
+      setGeneratedImageId(response.data.image_id ?? null);
       setImprovedPrompt(response.data.improved_prompt ?? null);
       // The generation just spent credits; pull the new balance so the navbar pill
       // ticks down instead of showing what the user had a moment ago.
@@ -325,7 +329,9 @@ const PremiumGenerator: React.FC = () => {
               className="mx-auto h-auto max-w-full rounded-md border-2 border-black shadow-lg"
             />
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <EditImageButton imageUrl={generatedImageUrl} />
+              {generatedImageId != null && (
+                <EditImageButton imageId={generatedImageId} imageUrl={generatedImageUrl} />
+              )}
               <Link
                 to="/gallery"
                 className="inline-block rounded-md bg-green-500 px-6 py-3 font-bold text-white transition duration-300 hover:bg-green-600"

@@ -71,6 +71,8 @@ export interface EditModel {
  */
 export interface EditResponse {
   image_url: string;
+  /** Send this back as `source_image_id` to edit the result again. */
+  image_id: number;
   prompt: string;
   credits_spent: number;
   nsfw: boolean;

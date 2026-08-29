@@ -287,7 +287,12 @@ const ArenaGenerator: React.FC = () => {
         <ImageModal
           image={selectedImage}
           onClose={() => setSelectedImage(null)}
-          customButton={<EditImageButton imageUrl={selectedImage.url} />}
+          customButton={
+            // Arena reshapes the response into `image_id` (see the mapping above).
+            selectedImage.image_id != null ? (
+              <EditImageButton imageId={selectedImage.image_id} imageUrl={selectedImage.url} />
+            ) : undefined
+          }
         />
       )}
     </div>

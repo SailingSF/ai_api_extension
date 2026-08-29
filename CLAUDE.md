@@ -128,6 +128,39 @@ redirect to the **production** site on completion, not back to your dev server.
 Testing the success page locally requires pointing the backend's `SITE_URL` at
 `http://localhost:3000`.
 
+## Image editing (`/edit`)
+
+`EditGenerator` posts to `POST /api/generate-image-with-input/`. Controls are gated on
+the `supports_*` flags of the selected `catalog.edit` entry — the server rejects a
+parameter the model can't use, so showing a control for a `false` flag produces a 400
+the user can't act on.
+
+### Send an id, not the bytes
+
+"Edit this image" (`EditImageButton`, used by the gallery modal, the arena modal and
+the premium result) passes the image's **id** through router state, and the editor
+submits it as `source_image_id`. The server presigns the object it already holds.
+
+Do not go back to fetching the image and re-uploading it. That is what this did
+first, and it broke: fetching one of our own S3 objects from the browser depends on
+the bucket's CORS allowlist covering the serving origin — `aiartarena.com` and
+`localhost:3000` are on it, `www.` and preview hosts are not — and on the browser not
+reusing the non-CORS cache entry the `<img>` tag just created for the same url. An id
+has neither failure mode, and skips a 10 MB round trip.
+
+`imageFiles.ts` keeps only the upload validation for files chosen from disk; the
+extension is what the server reads to decide a file's type, not the MIME.
+
+### 400 vs 502
+
+400 means the request must change — no retry button. 502 means the provider failed and
+**nothing was charged** (credits are deducted only after the image is stored), so it
+gets one. A client-side timeout is neither: the server may still be finishing, so that
+message tells the user to check their balance rather than promising a free retry.
+
+Edits are stored `gallery_eligible=False` and never reach the public gallery — don't
+offer a gallery link on the result.
+
 ## Git workflow
 
 Branch off `main` for features and open a PR for review before merging — don't commit directly to `main`.

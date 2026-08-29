@@ -22,6 +22,15 @@ export const IMAGE_ACCEPT_ATTRIBUTE = 'image/jpeg,image/png,image/webp';
 const hasAllowedExtension = (name: string): boolean =>
   ALLOWED_IMAGE_EXTENSIONS.some((extension) => name.toLowerCase().endsWith(extension));
 
+/*
+ * There is deliberately no "download an image we already host and re-upload it"
+ * helper here any more. Editing a picture the site already stores is done by sending
+ * its `source_image_id` -- the server presigns the object it already holds. Fetching
+ * our own S3 object from the browser meant every handoff depended on the bucket's
+ * CORS allowlist covering the serving origin, and on the browser not reusing the
+ * non-CORS cache entry that the <img> tag had just created for the same url.
+ */
+
 /** A human explanation of why this file won't do, or null if it will. */
 export const validateImageFile = (file: File): string | null => {
   if (!hasAllowedExtension(file.name)) {
@@ -32,26 +41,4 @@ export const validateImageFile = (file: File): string | null => {
     return `${file.name} is ${megabytes} MB. The limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.`;
   }
   return null;
-};
-
-/**
- * Pull an already-generated image down as a File so it can be re-uploaded.
- *
- * The editing endpoint takes multipart uploads, not urls, so carrying an image from
- * the gallery or a generation result into the editor means fetching the bytes back
- * out of S3. The bucket sends CORS headers for this app's origins, and returns the
- * object as `binary/octet-stream` -- harmless, because the name is what the server
- * reads. Anything that doesn't already end in an allowed extension gets `.png`.
- */
-export const fetchImageAsFile = async (url: string): Promise<File> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Could not load that image (${response.status}).`);
-  }
-  const blob = await response.blob();
-
-  const lastSegment = new URL(url).pathname.split('/').pop() || 'source-image';
-  const name = hasAllowedExtension(lastSegment) ? lastSegment : `${lastSegment}.png`;
-
-  return new File([blob], name, { type: blob.type || 'image/png' });
 };

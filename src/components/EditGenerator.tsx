@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -8,7 +8,7 @@ import CreditNotice from './CreditNotice';
 import { useModelCatalog } from '../useModelCatalog';
 import { useAuth } from '../AuthContext';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
-import { IMAGE_ACCEPT_ATTRIBUTE, fetchImageAsFile, validateImageFile } from '../imageFiles';
+import { IMAGE_ACCEPT_ATTRIBUTE, validateImageFile } from '../imageFiles';
 import type { EditResponse } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
@@ -58,13 +58,18 @@ const EditGenerator: React.FC = () => {
 
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  /**
+   * An image the server already stores, arrived at through "edit this image". It is
+   * referenced by id rather than uploaded -- there are no bytes on this side at all,
+   * and the url is only here to draw a thumbnail.
+   */
+  const [sourceImage, setSourceImage] = useState<{ id: number | string; url: string } | null>(null);
   const [prompt, setPrompt] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [size, setSize] = useState<string>('');
   const [result, setResult] = useState<EditResponse | null>(null);
   const [submittedPrompt, setSubmittedPrompt] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isLoadingSource, setIsLoadingSource] = useState<boolean>(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeTone, setNoticeTone] = useState<'error' | 'credits'>('error');
@@ -100,9 +105,14 @@ const EditGenerator: React.FC = () => {
   // than let the user discover it as a 400.
   useEffect(() => {
     if (!supportsMultiple) {
-      setFiles((current) => (current.length > 1 ? current.slice(0, 1) : current));
+      // A referenced source counts as the one input, so uploads go rather than
+      // outrank it.
+      setFiles((current) => {
+        const limit = sourceImage ? 0 : 1;
+        return current.length > limit ? current.slice(0, limit) : current;
+      });
     }
-  }, [supportsMultiple]);
+  }, [supportsMultiple, sourceImage]);
 
   // A model that fixes its own output shape rejects `size` outright, so drop a
   // leftover choice when the selection moves to one.
@@ -110,28 +120,19 @@ const EditGenerator: React.FC = () => {
     if (!supportsSize) setSize('');
   }, [supportsSize]);
 
-  const loadSourceImage = useCallback(async (url: string): Promise<void> => {
-    setIsLoadingSource(true);
-    setFileError(null);
-    try {
-      setFiles([await fetchImageAsFile(url)]);
-    } catch {
-      setFileError(
-        "That image couldn't be loaded for editing. Try saving it and uploading it yourself."
-      );
-    } finally {
-      setIsLoadingSource(false);
-    }
-  }, []);
-
-  // Arriving from "Edit this image" elsewhere in the app. The url comes through
-  // router state rather than the query string on purpose: it is then always one this
-  // app produced, so there is no arbitrary-url fetcher here for anyone to point at
-  // something else.
-  const sourceImageUrl = (location.state as { sourceImageUrl?: string } | null)?.sourceImageUrl;
+  // Arriving from "Edit this image" elsewhere in the app. Nothing is downloaded: the
+  // id is what gets submitted, and the server presigns the object it already holds.
+  const handoff = location.state as {
+    sourceImageId?: number | string;
+    sourceImageUrl?: string;
+  } | null;
+  const handoffId = handoff?.sourceImageId;
+  const handoffUrl = handoff?.sourceImageUrl;
   useEffect(() => {
-    if (sourceImageUrl) void loadSourceImage(sourceImageUrl);
-  }, [sourceImageUrl, loadSourceImage]);
+    if (handoffId != null && handoffUrl) {
+      setSourceImage({ id: handoffId, url: handoffUrl });
+    }
+  }, [handoffId, handoffUrl]);
 
   const handleFilesPicked = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const picked = Array.from(event.target.files ?? []);
@@ -146,7 +147,13 @@ const EditGenerator: React.FC = () => {
     }
 
     setFileError(null);
-    setFiles((current) => (supportsMultiple ? [...current, ...picked] : picked.slice(0, 1)));
+    if (!supportsMultiple) {
+      // Choosing a file on a single-image model means editing that file instead.
+      setSourceImage(null);
+      setFiles(picked.slice(0, 1));
+      return;
+    }
+    setFiles((current) => [...current, ...picked]);
   };
 
   const removeFile = (index: number): void => {
@@ -155,6 +162,7 @@ const EditGenerator: React.FC = () => {
 
   const startOver = (): void => {
     setFiles([]);
+    setSourceImage(null);
     setPrompt('');
     setResult(null);
     setNotice(null);
@@ -184,9 +192,12 @@ const EditGenerator: React.FC = () => {
       const form = new FormData();
       form.append('prompt', prompt);
       form.append('selected_model', selectedModel);
+      // An image the server already stores travels as an id -- no download, no
+      // re-upload, and it is the first reference the provider sees.
+      if (sourceImage) form.append('source_image_id', String(sourceImage.id));
       if (supportsMultiple) {
         files.forEach((file) => form.append('input_images[]', file));
-      } else {
+      } else if (files.length > 0) {
         form.append('input_image', files[0]);
       }
       if (size) form.append('size', size);
@@ -266,7 +277,8 @@ const EditGenerator: React.FC = () => {
   // Only claim someone can't afford it once the account has actually loaded -- a slow
   // /api/me/ shouldn't block the button on a balance we don't know yet.
   const cannotAfford = isLoggedIn && account != null && cost > 0 && balance < cost;
-  const isReady = files.length > 0 && prompt.trim().length > 0 && !!selectedModel;
+  const isReady =
+    (files.length > 0 || sourceImage != null) && prompt.trim().length > 0 && !!selectedModel;
   const wasClamped = result != null && result.prompt !== submittedPrompt;
 
   const editLabel = (): string => {
@@ -339,13 +351,11 @@ const EditGenerator: React.FC = () => {
             >
               <Upload size={18} />
               <span>
-                {isLoadingSource
-                  ? 'Loading your image…'
-                  : files.length === 0
-                    ? 'Choose a JPEG, PNG or WEBP (max 10 MB)'
-                    : supportsMultiple
-                      ? 'Add another image'
-                      : 'Choose a different image'}
+                {files.length === 0 && !sourceImage
+                  ? 'Choose a JPEG, PNG or WEBP (max 10 MB)'
+                  : supportsMultiple
+                    ? 'Add another image'
+                    : 'Choose a different image'}
               </span>
             </label>
             <input
@@ -357,8 +367,27 @@ const EditGenerator: React.FC = () => {
               className="hidden"
             />
             {fileError && <p className="mt-2 text-sm text-red-600">{fileError}</p>}
-            {files.length > 0 && (
+            {(sourceImage != null || files.length > 0) && (
               <div className="mt-3 flex flex-wrap gap-3">
+                {sourceImage && (
+                  <div className="relative">
+                    {/* A plain <img> against the same url the gallery just showed --
+                        no fetch, so no CORS involved. */}
+                    <img
+                      src={sourceImage.url}
+                      alt="Selected for editing"
+                      className="h-24 w-24 rounded-md border-2 border-black object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSourceImage(null)}
+                      aria-label="Remove this image"
+                      className="absolute -right-2 -top-2 rounded-full border-2 border-black bg-white p-1 text-black transition duration-300 hover:bg-red-500 hover:text-white"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 {/* Driven off `files`, not `previews`: the object urls are rebuilt in an
                     effect, so for one paint after a removal `previews` is still the
                     longer, already-revoked list. Mapping the files and skipping a
@@ -520,7 +549,8 @@ const EditGenerator: React.FC = () => {
                 onClick={() => {
                   setResult(null);
                   setPrompt('');
-                  void loadSourceImage(result.image_url);
+                  setFiles([]);
+                  setSourceImage({ id: result.image_id, url: result.image_url });
                 }}
                 className="rounded-md bg-teal-500 px-6 py-3 font-bold text-white transition duration-300 hover:bg-teal-600"
               >
