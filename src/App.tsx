@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 const ArenaGenerator = React.lazy(() => import('./components/ArenaGenerator'));
 const FreeImageGenerator = React.lazy(() => import('./components/FreeImageGenerator'));
 const PremiumGenerator = React.lazy(() => import('./components/PremiumGenerator'));
+const EditGenerator = React.lazy(() => import('./components/EditGenerator'));
 const Gallery = React.lazy(() => import('./components/Gallery'));
 const Info = React.lazy(() => import('./components/Info'));
 const Home = React.lazy(() => import('./components/Home'));
@@ -40,6 +41,7 @@ function AppContent(): JSX.Element {
           <Route path="/arena" element={<ArenaGenerator />} />
           <Route path="/generate" element={<FreeImageGenerator />} />
           <Route path="/premium" element={<PremiumGenerator />} />
+          <Route path="/edit" element={<EditGenerator />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/billing" element={<Billing />} />
           {/* Stripe Checkout returns the browser to these two. */}

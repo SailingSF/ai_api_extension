@@ -10,6 +10,7 @@ const routes = [
   '/arena',
   '/generate',
   '/premium',
+  '/edit',
   '/gallery',
   '/info',
   '/billing',

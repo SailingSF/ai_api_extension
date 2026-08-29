@@ -9,6 +9,7 @@ import {
   Grid,
   LogIn,
   Info as InfoIcon,
+  Wand2,
   Zap,
   CreditCard,
 } from 'lucide-react';
@@ -233,6 +234,15 @@ const Home: React.FC = () => {
         </motion.div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+          <p className="mb-2 text-center font-medium">
+            Upload a picture and change it with a plain instruction
+          </p>
+          <Button to="/edit" className="bg-teal-500 text-white hover:bg-teal-600" icon={Wand2}>
+            AI Image Editor
+          </Button>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
           <p className="mb-2 text-center font-medium">
             Browse and upvote images, compare models and prompts
           </p>
