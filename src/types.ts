@@ -40,14 +40,40 @@ export interface PremiumModel {
   tags: string[];
 }
 
+/**
+ * An entry from the catalog's `edit` array. The four `supports_*` flags are what the
+ * editing UI gates its controls on: the server rejects a parameter the selected model
+ * can't use, so a control shown for a `false` flag produces a 400 the user can do
+ * nothing about.
+ */
 export interface EditModel {
   key: string;
   label: string;
+  description: string;
   cost: number;
   provider: string;
   supports_mask: boolean;
   supports_multiple_images: boolean;
+  supports_size: boolean;
+  supports_strength: boolean;
+  /** Prompt budget. The server clamps a longer instruction rather than erroring. */
+  max_prompt_chars: number;
   tags: string[];
+}
+
+/**
+ * POST /api/generate-image-with-input/.
+ *
+ * `prompt` is what was actually sent, not what was typed -- compare the two to know
+ * whether the server's clamp fired. There is no balance in this response; refresh it
+ * with GET /api/me/. Edits are stored `gallery_eligible=False`, so the image comes
+ * back to the uploader and goes no further.
+ */
+export interface EditResponse {
+  image_url: string;
+  prompt: string;
+  credits_spent: number;
+  nsfw: boolean;
 }
 
 export interface ModelCatalog {

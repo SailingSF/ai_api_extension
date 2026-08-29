@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import ImageModal from './ImageModal';
+import EditImageButton from './EditImageButton';
 import InPageNavbar from './InPageNavbar';
 import LoadingSpinner from './LoadingSpinner';
 import UpvoteButton from './UpvoteButton';
@@ -126,7 +127,11 @@ const Gallery: React.FC = () => {
         )}
 
         {selectedImage && (
-          <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />
+          <ImageModal
+            image={selectedImage}
+            onClose={() => setSelectedImage(null)}
+            customButton={<EditImageButton imageUrl={selectedImage.url} />}
+          />
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import InPageNavbar from './InPageNavbar';
 import NSFWModal from './NSFWModal';
 import CreditNotice from './CreditNotice';
+import EditImageButton from './EditImageButton';
 import axios from 'axios';
 import { useModelCatalog } from '../useModelCatalog';
 import { useAuth } from '../AuthContext';
@@ -323,7 +324,8 @@ const PremiumGenerator: React.FC = () => {
               height={1024}
               className="mx-auto h-auto max-w-full rounded-md border-2 border-black shadow-lg"
             />
-            <div className="mt-6 text-center">
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <EditImageButton imageUrl={generatedImageUrl} />
               <Link
                 to="/gallery"
                 className="inline-block rounded-md bg-green-500 px-6 py-3 font-bold text-white transition duration-300 hover:bg-green-600"

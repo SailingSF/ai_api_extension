@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import InPageNavbar from './InPageNavbar';
 import axios from 'axios';
 import ImageModal from './ImageModal';
+import EditImageButton from './EditImageButton';
 import CreditNotice from './CreditNotice';
 import { useAuth } from '../AuthContext';
 import { useModelCatalog } from '../useModelCatalog';
@@ -282,7 +283,13 @@ const ArenaGenerator: React.FC = () => {
           Home
         </Link>
       </div>
-      {selectedImage && <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />}
+      {selectedImage && (
+        <ImageModal
+          image={selectedImage}
+          onClose={() => setSelectedImage(null)}
+          customButton={<EditImageButton imageUrl={selectedImage.url} />}
+        />
+      )}
     </div>
   );
 };
