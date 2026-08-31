@@ -92,6 +92,11 @@ const Gallery: React.FC = () => {
                     className="h-full w-full cursor-pointer object-cover transition duration-300 group-hover:opacity-75"
                     onClick={() => setSelectedImage(image)}
                   />
+                  {image.is_edit && (
+                    <span className="pointer-events-none absolute left-1 top-1 rounded border-2 border-black bg-teal-400 px-1.5 py-0.5 text-[10px] font-bold uppercase text-black">
+                      Edit
+                    </span>
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 transition duration-300 group-hover:opacity-100">
                     <button
                       className="mr-2 rounded bg-black bg-opacity-50 px-3 py-1 text-sm text-white"

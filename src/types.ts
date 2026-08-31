@@ -66,8 +66,8 @@ export interface EditModel {
  *
  * `prompt` is what was actually sent, not what was typed -- compare the two to know
  * whether the server's clamp fired. There is no balance in this response; refresh it
- * with GET /api/me/. Edits are stored `gallery_eligible=False`, so the image comes
- * back to the uploader and goes no further.
+ * with GET /api/me/. Edits now land in the public gallery like any other image unless
+ * the request opted out, carrying a link back to the picture they were made from.
  */
 export interface EditResponse {
   image_url: string;
@@ -90,6 +90,25 @@ export interface GenerationLog {
   model: string;
 }
 
+/**
+ * Where an edit came from, served on every gallery payload as `edit_source`.
+ *
+ * `type` is the only key guaranteed to be there: for a `user_upload` every other
+ * field is null, because the site holds no row for a file the user brought with them
+ * -- all the UI can say is that the source was an upload. For a `site_image`,
+ * `image_id`/`image_url` point at the original and `prompt`/`model` are how it was
+ * made. When `is_edit` is true that prompt is itself an edit instruction rather than
+ * a description of the picture, so it needs a different label.
+ */
+export interface EditSource {
+  type: 'site_image' | 'user_upload';
+  image_id: number | null;
+  image_url: string | null;
+  prompt: string | null;
+  model: string | null;
+  is_edit: boolean;
+}
+
 export interface ImageItem {
   id?: number | string;
   url: string;
@@ -97,6 +116,10 @@ export interface ImageItem {
   generation_log: GenerationLog;
   image_id?: number | string; // for Arena reshaped results
   created_at: string;
+  /** False (or absent, on payloads that predate provenance) for a plain generation. */
+  is_edit?: boolean;
+  /** Null whenever `is_edit` is false. Lineage is one level deep. */
+  edit_source?: EditSource | null;
 }
 
 export interface GalleryResponse {
