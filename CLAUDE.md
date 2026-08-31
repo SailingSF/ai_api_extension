@@ -158,8 +158,14 @@ extension is what the server reads to decide a file's type, not the MIME.
 gets one. A client-side timeout is neither: the server may still be finishing, so that
 message tells the user to check their balance rather than promising a free retry.
 
-Edits are stored `gallery_eligible=False` and never reach the public gallery — don't
-offer a gallery link on the result.
+Edits now land in the public gallery like any other image unless the request opted
+out, and they carry their lineage with them: every gallery payload has `is_edit` and
+`edit_source`. `edit_source.type` is `site_image` when the source was one of our own
+pictures (the other keys then link back to it and describe how it was made) and
+`user_upload` when it was a file the user brought, in which case every other key is
+null and there is nothing to link to. `ImageModal` renders that provenance, so an
+edit's `generation_log.prompt` is labelled as an instruction rather than as the prompt
+that made the picture.
 
 ## Git workflow
 
