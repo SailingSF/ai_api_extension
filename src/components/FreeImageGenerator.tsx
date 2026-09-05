@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import NSFWModal from './NSFWModal';
 import APIKeySetup from './APIKeySetup';
 import InPageNavbar from './InPageNavbar';
+import CreditNotice from './CreditNotice';
 import axios from 'axios';
 import { HfInference } from '@huggingface/inference';
 import Tooltip from './Tooltip';
@@ -34,6 +35,7 @@ const FreeImageGenerator: React.FC = () => {
   const [improvePrompt, setImprovePrompt] = useState<boolean>(false);
   const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   const [isLoadingRandomPrompt, setIsLoadingRandomPrompt] = useState<boolean>(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const { catalog, isLoading: isLoadingModels, error: modelsError } = useModelCatalog();
   // Memoised so the empty-array fallback doesn't produce a new reference each
@@ -59,6 +61,7 @@ const FreeImageGenerator: React.FC = () => {
     setNegativePrompt('');
     setImprovedPrompt(null);
     setGeneratedImageUrl(null);
+    setNotice(null);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -74,6 +77,7 @@ const FreeImageGenerator: React.FC = () => {
   const generateImage = async (): Promise<void> => {
     setIsLoading(true);
     setShowNSFWWarning(false);
+    setNotice(null);
 
     try {
       if (hfApiKey) {
@@ -112,24 +116,18 @@ const FreeImageGenerator: React.FC = () => {
       const backendMessage: string | undefined = Array.isArray(data)
         ? data[0]
         : (data?.detail ?? data?.message);
+      // The free queue times out two ways -- a 504 at the edge, or a 400 the backend
+      // writes when the provider gave up. Same situation, same advice.
+      const timedOut =
+        error.response?.status === 504 ||
+        data?.message === 'The request to the external API timed out';
 
-      if (
-        error.response &&
-        error.response.status === 400 &&
-        data?.message === 'The request to the external API timed out'
-      ) {
-        alert('The request to the image generator timed out, try again in one second.');
-      } else if (error.response && error.response.status === 504) {
-        alert(
-          "The free image generator is taking too long to respond. This might work if you try again in a few seconds. Premium image generator doesn't have this problem."
-        );
-      } else if (backendMessage) {
-        alert(backendMessage);
-      } else {
-        alert(
-          `Error generating image: ${error.message}. ${hfApiKey ? 'Please check your Hugging Face API key.' : "This is probably not Max's fault. I would try again a few times before giving up. But I'm built different, so do you."}`
-        );
-      }
+      setNotice(
+        timedOut
+          ? "The free image generator is taking too long to respond. This might work if you try again in a few seconds. Premium image generator doesn't have this problem."
+          : (backendMessage ??
+              `Error generating image: ${error.message}. ${hfApiKey ? 'Please check your Hugging Face API key.' : "This is probably not Max's fault. I would try again a few times before giving up. But I'm built different, so do you."}`)
+      );
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +162,7 @@ const FreeImageGenerator: React.FC = () => {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error generating random prompt:', error);
-      alert('Failed to generate a random prompt. Please try again.');
+      setNotice('Failed to generate a random prompt. Please try again.');
     } finally {
       setIsLoadingRandomPrompt(false);
     }
@@ -178,7 +176,6 @@ const FreeImageGenerator: React.FC = () => {
           name="description"
           content="Generate AI images for free using Hugging Face models. Optional negative prompts and random prompt generator."
         />
-        <link rel="canonical" href="https://yourdomain.com/generate" />
       </Helmet>
       <InPageNavbar pageColor="bg-blue-500" />
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white md:p-6">
@@ -301,6 +298,9 @@ const FreeImageGenerator: React.FC = () => {
               />
             </div>
           )}
+          {/* Failures belong next to the button that failed. These used to be alert()s,
+              which dead-ended an anonymous visitor in a browser modal. */}
+          {notice && <CreditNotice tone="error">{notice}</CreditNotice>}
           <div className="flex space-x-4">
             <button
               type="submit"

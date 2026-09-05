@@ -1,14 +1,5 @@
 export type ModelSpeed = 'fast' | 'slow';
 
-export interface TextToImageModel {
-  id: string;
-  name: string;
-  supportsNegativePrompt: boolean;
-  speed?: ModelSpeed;
-  nsfw?: boolean;
-  description?: string;
-}
-
 /**
  * Model catalog served by the backend at GET /api/models/.
  *
@@ -126,11 +117,6 @@ export interface GalleryResponse {
   results: ImageItem[];
   next: string | null;
   previous: string | null;
-}
-
-export interface ApiKeyContextValue {
-  apiKey: string;
-  saveApiKey: (key: string) => void;
 }
 
 export interface AuthModalProps {

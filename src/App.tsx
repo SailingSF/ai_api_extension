@@ -1,12 +1,17 @@
 import React, { Suspense, useEffect } from 'react';
 import ReactGA from 'react-ga4';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import AuthModal from './components/AuthModal';
 import ActivateAccount from './components/ActivateAccount';
 import usePageTracking from './usePageTracking';
 import LoadingSpinner from './components/LoadingSpinner';
 import { AuthProvider, useAuth } from './AuthContext';
+
+// One canonical tag for every route, built from the path. Each page used to declare
+// its own and they all named `yourdomain.com`, which told search engines the real
+// copy of the site lived somewhere we don't own. Same env var the sitemap uses.
+const SITE_URL = (process.env.REACT_APP_SITE_URL ?? 'https://aiartarena.com').replace(/\/$/, '');
 
 const ArenaGenerator = React.lazy(() => import('./components/ArenaGenerator'));
 const FreeImageGenerator = React.lazy(() => import('./components/FreeImageGenerator'));
@@ -23,6 +28,7 @@ function AppContent(): JSX.Element {
   // One modal for the whole app: the navbar used to mount a second copy of its own,
   // so which instance you were looking at depended on where you clicked.
   const { isAuthModalOpen, authModalMessage, closeAuthModal } = useAuth();
+  const { pathname } = useLocation();
 
   usePageTracking();
 
@@ -34,6 +40,7 @@ function AppContent(): JSX.Element {
           name="description"
           content="Generate AI images, compare models, and explore the gallery."
         />
+        <link rel="canonical" href={`${SITE_URL}${pathname}`} />
       </Helmet>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>

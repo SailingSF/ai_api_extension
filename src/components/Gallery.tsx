@@ -62,7 +62,6 @@ const Gallery: React.FC = () => {
           name="description"
           content="Explore community-generated AI art, view prompts and models, and upvote your favorites."
         />
-        <link rel="canonical" href="https://yourdomain.com/gallery" />
       </Helmet>
       <InPageNavbar pageColor="bg-green-500" />
       <div className="p-6">

@@ -143,7 +143,9 @@ const PremiumGenerator: React.FC = () => {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error generating random prompt:', error);
-      alert('Failed to generate a random prompt. Please try again.');
+      // This page already reports failures inline; the last alert() here was the odd
+      // one out.
+      setNotice('Failed to generate a random prompt. Please try again.');
     } finally {
       setIsLoadingRandomPrompt(false);
     }
@@ -173,7 +175,6 @@ const PremiumGenerator: React.FC = () => {
           name="description"
           content="Access premium AI image models with faster generation and automatic prompt optimization."
         />
-        <link rel="canonical" href="https://yourdomain.com/premium" />
       </Helmet>
       <InPageNavbar pageColor="bg-purple-500" />
       <div className="bg-gradient-to-r from-purple-500 to-purple-700 p-4 text-white md:p-6">
@@ -275,8 +276,11 @@ const PremiumGenerator: React.FC = () => {
               />
             </div>
           )}
+          {/* `cannotAfford` already covers a zero balance -- every premium model costs
+              something -- so it is the whole test. A bare `balance <= 0` also fired for
+              signed-out users and for failures that have nothing to do with credits. */}
           {notice && (
-            <CreditNotice tone="error" showBuyLink={cannotAfford || balance <= 0}>
+            <CreditNotice tone="error" showBuyLink={cannotAfford}>
               {notice}
             </CreditNotice>
           )}

@@ -134,7 +134,6 @@ const ArenaGenerator: React.FC = () => {
           name="description"
           content="Generate multiple images from different AI models with one prompt and vote for the winner."
         />
-        <link rel="canonical" href="https://yourdomain.com/arena" />
       </Helmet>
       <InPageNavbar pageColor="bg-amber-400" />
       <div className="bg-gradient-to-r from-amber-400 to-yellow-600 p-4 text-white md:p-6">

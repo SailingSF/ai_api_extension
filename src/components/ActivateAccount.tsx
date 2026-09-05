@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { SIGNUP_BONUS_CREDITS } from '../constants';
 
 type Status = 'activating' | 'success' | 'error';
 
@@ -51,7 +52,7 @@ const ActivateAccount: React.FC = () => {
           <div>
             <p className="mb-2 text-green-600">{message}</p>
             {!message.includes('already been verified') && (
-              <p>You have claimed your 20 free credits.</p>
+              <p>You have claimed your {SIGNUP_BONUS_CREDITS} free credits.</p>
             )}
             <p className="mt-4">Redirecting to home page in 5 seconds...</p>
           </div>

@@ -296,7 +296,6 @@ const EditGenerator: React.FC = () => {
           name="description"
           content="Upload a picture and edit it with a plain instruction. Remove objects, change the season, restyle a portrait — with FLUX Kontext, Qwen, Nano Banana and GPT Image."
         />
-        <link rel="canonical" href="https://yourdomain.com/edit" />
       </Helmet>
       <InPageNavbar pageColor="bg-teal-500" />
       <div className="bg-gradient-to-r from-teal-500 to-teal-700 p-4 text-white md:p-6">
