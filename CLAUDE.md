@@ -20,11 +20,12 @@ Requires a local `.env` (gitignored) with:
 - `REACT_APP_API_BASE_URL` — backend API endpoint, read across components
 - `REACT_APP_SITE_PASSWORD` — optional site-access password
 - `SITE_URL` (or `REACT_APP_SITE_URL`) — base URL for sitemap generation; defaults to `https://yourdomain.com` if unset
+- `REACT_APP_SITE_URL` also builds the canonical URL in `src/App.tsx`, which falls back to `https://aiartarena.com`
 
 ## Conventions & gotchas
 
 - **Routes** are lazy-loaded in `src/App.tsx` via `React.lazy` + `Suspense`. When adding a public route, also add its path to the `routes` array in `scripts/generate-sitemap.js` (lines ~8-15) or it won't appear in the sitemap.
-- **SEO**: per-page `<title>`/meta use `react-helmet-async`; `HelmetProvider` wraps the app in `src/index.tsx`.
+- **SEO**: per-page `<title>`/meta use `react-helmet-async`; `HelmetProvider` wraps the app in `src/index.tsx`. The `<link rel="canonical">` is declared **once**, in `src/App.tsx`, from the current path — don't add per-page ones. Every page used to carry its own and they all pointed at `yourdomain.com`.
 - Shared TypeScript interfaces live in `src/types.ts`.
 - Auth is a **DRF token** in `localStorage` under `token`, sent as `Authorization: Token <key>` (not a JWT, despite the name). Activation happens via the `/activate/:token` route.
 - **Auth state comes from `useAuth()`** (`src/AuthContext.tsx`), not from reading `localStorage` during render. `<AuthProvider>` wraps the app in `src/App.tsx` and owns the token, the live account, and the single `AuthModal`. Reading the token at render time is not reactive — logging in would leave the rest of the page believing the user was signed out until the next navigation. Use `login(token)` rather than writing `localStorage` yourself; that is what updates the navbar balance.
@@ -43,7 +44,7 @@ the result back over the API.
 `AuthModal` stashes a `credits` value in `localStorage` at login. It is a **snapshot**
 and goes stale the moment the user generates an image or buys a pack.
 
-Use `useAccount()` (`src/useAccount.ts`) or `useAuth()` directly, which read
+Use `useAuth()` (`src/AuthContext.tsx`), which reads
 `GET /api/me/` through `<AuthProvider>`, and call `refresh()` after anything that
 moves credits — a generation, a purchase. The provider keeps the `localStorage` copy
 in step for older code still reading it, and drops the token on a 401 rather than
@@ -116,7 +117,7 @@ for people who are genuinely signed out.
 
 `SIGNUP_BONUS_CREDITS` in `src/constants.ts` is the one place the new-account bonus
 is written down, and it is quoted in the register form, the navbar, the home hero,
-the signed-out generate buttons and `/billing`. The backend owns the real number; if
+the signed-out generate buttons, the `/activate/:token` confirmation and `/billing`. The backend owns the real number; if
 the API ever reports it, read it from there and delete the constant — the same
 contract as prices and model costs.
 

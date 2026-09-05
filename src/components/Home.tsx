@@ -118,7 +118,6 @@ const Home: React.FC = () => {
           name="description"
           content="Compare AI image models in The Arena, generate free or premium AI images, and explore the community gallery."
         />
-        <link rel="canonical" href="https://yourdomain.com/" />
         <meta property="og:title" content="AI Art Arena" />
         <meta property="og:description" content="Compare AI models and create stunning AI art." />
       </Helmet>

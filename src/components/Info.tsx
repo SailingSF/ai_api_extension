@@ -12,7 +12,6 @@ const Info: React.FC = () => {
           name="description"
           content="Learn what AI Art Arena is, features, and FAQs about generating AI images and comparing models."
         />
-        <link rel="canonical" href="https://yourdomain.com/info" />
       </Helmet>
       <InPageNavbar pageColor="bg-gray-500" />
       <h1 className="mb-6 mt-4 text-center text-3xl font-bold">🏟️ About The Arena 🏟️</h1>
