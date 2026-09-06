@@ -111,9 +111,16 @@ export interface ImageItem {
   is_edit?: boolean;
   /** Null whenever `is_edit` is false. Lineage is one level deep. */
   edit_source?: EditSource | null;
+  /**
+   * False means the image is kept out of the public gallery. Always true on public
+   * gallery payloads; only the personal gallery ever returns false. Absent on
+   * payloads that predate the field -- treat that as public.
+   */
+  gallery_eligible?: boolean;
 }
 
 export interface GalleryResponse {
+  count?: number;
   results: ImageItem[];
   next: string | null;
   previous: string | null;
@@ -191,6 +198,12 @@ export interface Account {
   email: string;
   userdisplay_name: string;
   tier: string;
+  /**
+   * The only gate for the private-gallery features. Do NOT branch on `tier`: the
+   * cancellation webhook overwrites it with FREE and it knows nothing about an admin
+   * grant, so an admin-granted user reads `tier: "FREE"` with `is_premium: true`.
+   */
+  is_premium: boolean;
   is_email_verified: boolean;
   credits: number;
   monthly_credits: number;

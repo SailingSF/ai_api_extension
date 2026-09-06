@@ -6,6 +6,7 @@ import axios from 'axios';
 import ImageModal from './ImageModal';
 import EditImageButton from './EditImageButton';
 import CreditNotice from './CreditNotice';
+import PrivateToggle from './PrivateToggle';
 import { useAuth } from '../AuthContext';
 import { useModelCatalog } from '../useModelCatalog';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
@@ -22,6 +23,7 @@ const ArenaGenerator: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<ImageItem | null>(null);
   const [selectedWinner, setSelectedWinner] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>): Promise<void> => {
     if (e) e.preventDefault();
@@ -40,7 +42,12 @@ const ArenaGenerator: React.FC = () => {
     setNotice(null);
     try {
       const config = { headers: { Authorization: `Token ${token}` } };
-      const response = await axios.post(`${API_BASE_URL}/api/arena-generate/`, { prompt }, config);
+      const response = await axios.post(
+        `${API_BASE_URL}/api/arena-generate/`,
+        // Omitted unless opted out; the backend defaults to publishing.
+        { prompt, ...(isPrivate ? { publish_to_gallery: false } : {}) },
+        config
+      );
       const reshapedResults: ImageItem[] = response.data.results.map((result: any) => ({
         url: result.image_url,
         generation_log: { prompt: result.prompt, model: result.model },
@@ -62,8 +69,17 @@ const ArenaGenerator: React.FC = () => {
       } else if (error.response && error.response.status === 403) {
         // Report this next to the button, with a way to fix it. It used to open the
         // login modal at a user who was already logged in.
+        // Also covers a stale local `is_premium`: the backend says so in its own
+        // message when a lapsed subscriber tries to opt out of the gallery.
         void refresh();
-        setNotice("You don't have enough credits or aren't at the right tier for this request.");
+        const data = error.response?.data;
+        const backendMessage: string | undefined = Array.isArray(data)
+          ? data[0]
+          : (data?.detail ?? data?.message);
+        setNotice(
+          backendMessage ??
+            "You don't have enough credits or aren't at the right tier for this request."
+        );
       } else {
         // eslint-disable-next-line no-console
         console.error('Error generating images:', error);
@@ -158,6 +174,7 @@ const ArenaGenerator: React.FC = () => {
               rows={3}
             />
           </div>
+          <PrivateToggle checked={isPrivate} onChange={setIsPrivate} />
           {notice && (
             <CreditNotice tone="error" showBuyLink={isOutOfCredits}>
               {notice}

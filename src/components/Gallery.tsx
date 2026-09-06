@@ -2,16 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { Lock } from 'lucide-react';
 import ImageModal from './ImageModal';
 import EditImageButton from './EditImageButton';
 import InPageNavbar from './InPageNavbar';
 import LoadingSpinner from './LoadingSpinner';
 import UpvoteButton from './UpvoteButton';
+import { useAuth } from '../AuthContext';
 import type { GalleryResponse, ImageItem } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
 
 const Gallery: React.FC = () => {
+  // `is_premium` is the gate, never `tier`: the cancellation webhook overwrites
+  // `tier` with FREE and it says nothing about an admin grant.
+  const { account } = useAuth();
+  const isPremium = !!account?.is_premium;
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedImage, setSelectedImage] = useState<ImageItem | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -67,12 +73,34 @@ const Gallery: React.FC = () => {
       <div className="p-6">
         <div className="mb-4 mt-4 flex flex-col items-center justify-between sm:flex-row">
           <h1 className="mb-2 text-3xl font-bold sm:mb-0">Image Gallery</h1>
-          <Link
-            to="/"
-            className="rounded bg-black px-4 py-2 text-white transition duration-300 hover:bg-gray-800"
-          >
-            Home
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Shown to everyone. Non-premium visitors get it greyed out with the
+                reason attached rather than nothing at all -- it is the cheapest
+                place to say what the subscription buys. */}
+            {isPremium ? (
+              <Link
+                to="/my-gallery"
+                className="flex items-center gap-1.5 rounded border-2 border-black bg-amber-300 px-4 py-2 font-bold text-black transition duration-300 hover:bg-amber-400"
+              >
+                <Lock size={14} /> My Gallery
+              </Link>
+            ) : (
+              <Link
+                to="/billing"
+                title="Only for premium users"
+                className="flex items-center gap-1.5 rounded border-2 border-gray-300 bg-gray-200 px-4 py-2 font-bold text-gray-500"
+              >
+                <Lock size={14} /> My Gallery
+                <span className="text-xs font-medium">Premium only</span>
+              </Link>
+            )}
+            <Link
+              to="/"
+              className="rounded bg-black px-4 py-2 text-white transition duration-300 hover:bg-gray-800"
+            >
+              Home
+            </Link>
+          </div>
         </div>
 
         {isLoading ? (

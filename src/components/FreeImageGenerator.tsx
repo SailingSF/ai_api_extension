@@ -5,6 +5,7 @@ import NSFWModal from './NSFWModal';
 import APIKeySetup from './APIKeySetup';
 import InPageNavbar from './InPageNavbar';
 import CreditNotice from './CreditNotice';
+import PrivateToggle from './PrivateToggle';
 import axios from 'axios';
 import { HfInference } from '@huggingface/inference';
 import Tooltip from './Tooltip';
@@ -36,6 +37,7 @@ const FreeImageGenerator: React.FC = () => {
   const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   const [isLoadingRandomPrompt, setIsLoadingRandomPrompt] = useState<boolean>(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
 
   const { catalog, isLoading: isLoadingModels, error: modelsError } = useModelCatalog();
   // Memoised so the empty-array fallback doesn't produce a new reference each
@@ -95,13 +97,24 @@ const FreeImageGenerator: React.FC = () => {
         setGeneratedImageUrl(imageUrl);
       } else {
         if (!API_BASE_URL) throw new Error('Missing REACT_APP_API_BASE_URL');
-        const response = await axios.post(`${API_BASE_URL}/api/generate-image/`, {
-          prompt,
-          negative_prompt: negativePrompt,
-          improved_prompt: improvedPrompt,
-          selected_model: selectedModel,
-          improve_prompt: improvePrompt,
-        });
+        // This endpoint takes anonymous calls, but a signed-in one is recorded
+        // against the user -- which is what puts free generations in the personal
+        // gallery and what makes the private opt-out possible at all. Send the token
+        // whenever there is one.
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_BASE_URL}/api/generate-image/`,
+          {
+            prompt,
+            negative_prompt: negativePrompt,
+            improved_prompt: improvedPrompt,
+            selected_model: selectedModel,
+            improve_prompt: improvePrompt,
+            // Omitted unless opted out; the backend defaults to publishing.
+            ...(isPrivate ? { publish_to_gallery: false } : {}),
+          },
+          token ? { headers: { Authorization: `Token ${token}` } } : undefined
+        );
         const imageUrl: string = response.data.image_url;
         setGeneratedImageUrl(imageUrl);
         setImprovedPrompt(response.data.improved_prompt ?? null);
@@ -298,6 +311,9 @@ const FreeImageGenerator: React.FC = () => {
               />
             </div>
           )}
+          {/* The user's own Hugging Face key never touches our backend, so there is
+              no image for us to keep private. */}
+          {!hfApiKey && <PrivateToggle checked={isPrivate} onChange={setIsPrivate} />}
           {/* Failures belong next to the button that failed. These used to be alert()s,
               which dead-ended an anonymous visitor in a browser modal. */}
           {notice && <CreditNotice tone="error">{notice}</CreditNotice>}
