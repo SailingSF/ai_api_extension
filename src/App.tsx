@@ -18,6 +18,7 @@ const FreeImageGenerator = React.lazy(() => import('./components/FreeImageGenera
 const PremiumGenerator = React.lazy(() => import('./components/PremiumGenerator'));
 const EditGenerator = React.lazy(() => import('./components/EditGenerator'));
 const Gallery = React.lazy(() => import('./components/Gallery'));
+const MyGallery = React.lazy(() => import('./components/MyGallery'));
 const Info = React.lazy(() => import('./components/Info'));
 const Home = React.lazy(() => import('./components/Home'));
 const Billing = React.lazy(() => import('./components/Billing'));
@@ -50,6 +51,9 @@ function AppContent(): JSX.Element {
           <Route path="/premium" element={<PremiumGenerator />} />
           <Route path="/edit" element={<EditGenerator />} />
           <Route path="/gallery" element={<Gallery />} />
+          {/* Signed-in premium only, and it gates itself. Deliberately out of the
+              sitemap: there is nothing here for a crawler. */}
+          <Route path="/my-gallery" element={<MyGallery />} />
           <Route path="/billing" element={<Billing />} />
           {/* Stripe Checkout returns the browser to these two. */}
           <Route path="/billing/success" element={<BillingSuccess />} />

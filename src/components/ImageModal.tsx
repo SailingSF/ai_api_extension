@@ -90,6 +90,11 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, customButton })
         {customButton && (
           <div className="mb-4 flex items-center justify-center">{customButton}</div>
         )}
+        {image.gallery_eligible === false && (
+          <p className="mb-3 inline-block rounded border-2 border-black bg-amber-300 px-2 py-0.5 text-xs font-bold uppercase">
+            Private — not in the public gallery
+          </p>
+        )}
         {isEdit && <EditProvenance source={image.edit_source as EditSource} />}
         <p className="mb-2 text-lg font-semibold">{isEdit ? 'Edit instruction:' : 'Prompt:'}</p>
         <p className="mb-2 text-lg font-medium">{image.generation_log.prompt}</p>

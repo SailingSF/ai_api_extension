@@ -5,6 +5,8 @@ import InPageNavbar from './InPageNavbar';
 import NSFWModal from './NSFWModal';
 import CreditNotice from './CreditNotice';
 import EditImageButton from './EditImageButton';
+import PrivateToggle from './PrivateToggle';
+import VisibilityToggle from './VisibilityToggle';
 import axios from 'axios';
 import { useModelCatalog } from '../useModelCatalog';
 import { useAuth } from '../AuthContext';
@@ -25,6 +27,10 @@ const PremiumGenerator: React.FC = () => {
   const [showNSFWWarning, setShowNSFWWarning] = useState<boolean>(false);
   const [isLoadingRandomPrompt, setIsLoadingRandomPrompt] = useState<boolean>(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
+  // `gallery_eligible` of the image on the result panel, so it can be pulled out of
+  // the public gallery after the fact.
+  const [isResultPublic, setIsResultPublic] = useState<boolean>(true);
 
   const { catalog, isLoading: isLoadingModels, error: modelsError } = useModelCatalog();
   // Memoised so the empty-array fallback doesn't produce a new reference each
@@ -45,6 +51,7 @@ const PremiumGenerator: React.FC = () => {
     setGeneratedImageUrl(null);
     setGeneratedImageId(null);
     setNotice(null);
+    setIsResultPublic(true);
   };
 
   const handleGenerateClick = (): void => {
@@ -90,11 +97,14 @@ const PremiumGenerator: React.FC = () => {
           improved_prompt: improvedPrompt || '',
           negative_prompt: negativePrompt,
           selected_model: selectedModel,
+          // Omitted unless opted out; the backend defaults to publishing.
+          ...(isPrivate ? { publish_to_gallery: false } : {}),
         },
         config
       );
       setGeneratedImageUrl(response.data.image_url);
       setGeneratedImageId(response.data.image_id ?? null);
+      setIsResultPublic(!isPrivate);
       setImprovedPrompt(response.data.improved_prompt ?? null);
       // The generation just spent credits; pull the new balance so the navbar pill
       // ticks down instead of showing what the user had a moment ago.
@@ -111,9 +121,16 @@ const PremiumGenerator: React.FC = () => {
         // Out of credits, or the wrong tier. Say so where the button is and offer
         // the fix -- sending this to the login modal asked a signed-in user to sign
         // in again. Refresh so the balance on screen matches the refusal.
+        // Re-read the account: a 403 here can also mean the local `is_premium` went
+        // stale mid-session, and the backend's message names that case explicitly.
         void refresh();
+        const data = error.response?.data;
+        const backendMessage: string | undefined = Array.isArray(data)
+          ? data[0]
+          : (data?.detail ?? data?.message);
         setNotice(
-          "You don't have enough credits or aren't on the right membership tier for this request."
+          backendMessage ??
+            "You don't have enough credits or aren't on the right membership tier for this request."
         );
       } else {
         // eslint-disable-next-line no-console
@@ -276,6 +293,7 @@ const PremiumGenerator: React.FC = () => {
               />
             </div>
           )}
+          <PrivateToggle checked={isPrivate} onChange={setIsPrivate} />
           {/* `cannotAfford` already covers a zero balance -- every premium model costs
               something -- so it is the whole test. A bare `balance <= 0` also fired for
               signed-out users and for failures that have nothing to do with credits. */}
@@ -335,6 +353,16 @@ const PremiumGenerator: React.FC = () => {
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               {generatedImageId != null && (
                 <EditImageButton imageId={generatedImageId} imageUrl={generatedImageUrl} />
+              )}
+              {/* Ownership is unambiguous here, which is why the make-private control
+                  lives on the result rather than on public gallery cards -- that
+                  payload does not say who made the image. */}
+              {generatedImageId != null && account?.is_premium && (
+                <VisibilityToggle
+                  imageId={generatedImageId}
+                  isPublic={isResultPublic}
+                  onChange={setIsResultPublic}
+                />
               )}
               <Link
                 to="/gallery"
