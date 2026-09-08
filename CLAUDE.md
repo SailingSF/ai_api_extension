@@ -54,12 +54,18 @@ The balance is on screen in more than one place now — the navbar pill
 (`src/components/AccountNav.tsx`), the `/billing` card, and the home hero — so a
 generation that doesn't call `refresh()` leaves several stale numbers, not one.
 
+The sentence that breaks the balance into its two buckets is rendered by both the
+navbar and `/billing`, and it had already drifted out of step once (both were still
+saying the monthly bucket "resets"). Both now read the labels from
+`src/billingCopy.ts`; change the wording there, not in the components.
+
 ### Two buckets, different lifetimes
 
 `GET /api/me/` returns `credits` (the spendable total) plus the two buckets behind
 it. They are not interchangeable and the UI should not merge them silently:
 
-- `monthly_credits` — subscription allowance, **resets** each billing period
+- `monthly_credits` — subscription allowance, granted each billing period and **rolls
+  over**; an unspent allowance is not taken back
 - `purchased_credits` — from packs and the signup bonus, **never expires**
 
 Spending drains the monthly bucket first.
@@ -74,6 +80,14 @@ Spending drains the monthly bucket first.
 
 The two return pages are transactional and only meaningful with a `session_id`, so
 they are deliberately kept out of `scripts/generate-sitemap.js`. Don't add them.
+
+### The `/billing` wording lives in `src/billingCopy.ts`
+
+Headings, benefit bullets, the two section pitches, the button labels and the
+reassurance line are strings in `src/billingCopy.ts`, not inline JSX — the file exists
+so the marketing copy can be edited without touching a component. It holds words only:
+no prices, no credit amounts, no logic. The "Best value" badge picks its own pack from
+the catalog's credits-per-dollar, so a backend reprice moves it without a frontend change.
 
 ### Prices are not ours to state
 

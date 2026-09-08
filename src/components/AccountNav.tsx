@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { LogIn, LogOut, Plus, Zap } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { LOW_CREDIT_THRESHOLD, SIGNUP_BONUS_CREDITS } from '../constants';
+import { BILLING_COPY } from '../billingCopy';
 
 /**
  * Color indicates the balance: emerald means you can generate, amber
@@ -121,10 +122,10 @@ const AccountNav: React.FC<AccountNavProps> = ({ isMobile }) => {
               <p className="mt-2 text-2xl font-bold text-emerald-700">
                 {credits} {credits === 1 ? 'credit' : 'credits'}
               </p>
-              {/* The split matters: one bucket resets each cycle, the other never expires. */}
+              {/* Same wording as /billing -- both read it from billingCopy. */}
               <p className="mt-1 text-xs text-gray-500">
-                {account.monthly_credits} from your plan (resets) · {account.purchased_credits}{' '}
-                purchased (never expire)
+                {account.monthly_credits} {BILLING_COPY.monthlyBucketLabel} ·{' '}
+                {account.purchased_credits} {BILLING_COPY.purchasedBucketLabel}
               </p>
             </>
           )}
