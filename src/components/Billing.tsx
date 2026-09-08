@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Helmet } from 'react-helmet-async';
-import { CreditCard, Settings, Sparkles } from 'lucide-react';
+import { Check, CreditCard, Settings, Sparkles } from 'lucide-react';
 import InPageNavbar from './InPageNavbar';
 import { useAuth } from '../AuthContext';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
+import { BILLING_COPY } from '../billingCopy';
 import type { BillingCatalog, CreditPack, SubscriptionPlan } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
@@ -67,6 +68,13 @@ const Billing: React.FC = () => {
     }
   };
 
+  // Derived from the catalog, never hardcoded -- a backend reprice moves the badge.
+  const perDollar = (p: CreditPack): number => p.credits / p.price_usd;
+  const packs = catalog?.credit_packs ?? [];
+  // On a list of one, "best value" says nothing.
+  const bestPackKey =
+    packs.length > 1 ? [...packs].sort((a, b) => perDollar(b) - perDollar(a))[0].key : null;
+
   const subscription = account?.subscription ?? null;
   const hasActivePlan =
     subscription != null && ['active', 'trialing'].includes(subscription.status);
@@ -82,9 +90,9 @@ const Billing: React.FC = () => {
       </Helmet>
       <InPageNavbar pageColor="bg-emerald-500" />
       <div className="bg-gradient-to-r from-emerald-500 to-emerald-700 p-4 text-white md:p-6">
-        <h2 className="text-center text-2xl font-bold md:text-4xl">Credits &amp; Plans</h2>
+        <h2 className="text-center text-2xl font-bold md:text-4xl">{BILLING_COPY.heroTitle}</h2>
         <p className="mt-2 text-center text-sm text-gray-100 sm:text-base">
-          Buy a pack once, or subscribe for a monthly allowance.
+          {BILLING_COPY.heroSubtitle}
         </p>
       </div>
 
@@ -108,10 +116,10 @@ const Billing: React.FC = () => {
                     {account.credits} {account.credits === 1 ? 'credit' : 'credits'}
                   </span>
                 </div>
-                {/* The split matters to the user: one bucket expires, the other doesn't. */}
+                {/* The split matters to the user: the buckets have different lifetimes. */}
                 <p className="mt-2 text-xs text-gray-500">
-                  {account.monthly_credits} from your plan (resets each billing period) ·{' '}
-                  {account.purchased_credits} purchased (never expire)
+                  {account.monthly_credits} {BILLING_COPY.monthlyBucketLabel} ·{' '}
+                  {account.purchased_credits} {BILLING_COPY.purchasedBucketLabel}
                 </p>
                 {hasActivePlan && subscription && (
                   <p className="mt-2 text-xs text-gray-600">
@@ -145,12 +153,27 @@ const Billing: React.FC = () => {
           </div>
         )}
 
+        {!hasActivePlan && (
+          <div className="rounded-lg border-2 border-black bg-white p-4">
+            <h3 className="mb-2 font-bold text-gray-800">{BILLING_COPY.benefitsTitle}</h3>
+            <ul className="space-y-1.5">
+              {BILLING_COPY.planBenefits.map((benefit) => (
+                <li key={benefit} className="flex items-start gap-2 text-sm text-gray-700">
+                  <Check size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Subscription plans */}
         {catalog && catalog.subscription_plans.length > 0 && (
           <section>
             <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-gray-800">
               <Sparkles size={18} /> Monthly plan
             </h3>
+            <p className="mb-3 text-sm text-gray-600">{BILLING_COPY.planPitch}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {catalog.subscription_plans.map((plan: SubscriptionPlan) => (
                 <div key={plan.key} className="rounded-lg border-2 border-black bg-white p-4">
@@ -173,7 +196,7 @@ const Billing: React.FC = () => {
                       ? 'Already subscribed'
                       : pendingKey === plan.key
                         ? 'Redirecting…'
-                        : 'Subscribe'}
+                        : BILLING_COPY.planCta}
                   </button>
                 </div>
               ))}
@@ -187,11 +210,19 @@ const Billing: React.FC = () => {
             <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-gray-800">
               <CreditCard size={18} /> One-time credit packs
             </h3>
+            <p className="mb-3 text-sm text-gray-600">{BILLING_COPY.packPitch}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {catalog.credit_packs.map((pack: CreditPack) => (
                 <div key={pack.key} className="rounded-lg border-2 border-black bg-white p-4">
-                  <div className="flex items-baseline justify-between">
-                    <span className="font-bold">{pack.display_name}</span>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="flex flex-wrap items-center gap-2 font-bold">
+                      {pack.display_name}
+                      {pack.key === bestPackKey && (
+                        <span className="rounded border-2 border-black bg-amber-300 px-1.5 py-0.5 text-xs font-bold text-black">
+                          {BILLING_COPY.bestValueBadge}
+                        </span>
+                      )}
+                    </span>
                     <span className="text-xl font-bold">${pack.price_usd}</span>
                   </div>
                   <p className="mt-1 text-sm text-gray-600">
@@ -202,7 +233,7 @@ const Billing: React.FC = () => {
                     disabled={pendingKey !== null}
                     className="mt-3 w-full rounded-md border-2 border-black bg-purple-500 px-4 py-2 font-bold text-white hover:bg-purple-600 disabled:cursor-not-allowed disabled:bg-gray-300"
                   >
-                    {pendingKey === pack.key ? 'Redirecting…' : 'Buy'}
+                    {pendingKey === pack.key ? 'Redirecting…' : BILLING_COPY.packCta}
                   </button>
                 </div>
               ))}
@@ -224,9 +255,7 @@ const Billing: React.FC = () => {
           </button>
         )}
 
-        <p className="text-xs text-gray-500">
-          Payments are handled by Stripe. We never see or store your card details.
-        </p>
+        <p className="text-xs text-gray-500">{BILLING_COPY.reassurance}</p>
       </div>
     </div>
   );
