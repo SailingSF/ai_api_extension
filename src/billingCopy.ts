@@ -19,18 +19,18 @@ export const BILLING_COPY = {
   heroSubtitle: 'Pay as you go, or subscribe and get more for your money.',
 
   /** Heading above the list of things a subscription unlocks. */
-  benefitsTitle: 'What a plan gets you',
+  benefitsTitle: 'What subscribing gets you',
 
   /** The bullet list itself. Add or remove lines freely. */
   planBenefits: [
     'A batch of credits every month, at the best price per credit',
-    'Unused credits roll over — nothing you paid for disappears',
+    'Unused credits roll over',
     'Keep any image private, out of the public gallery',
-    'My Gallery — every image you have made, in one place',
+    'Manage your own gallery, every image you made in one place',
   ],
 
   /** One line under the "Monthly plan" heading. The value claim lives here. */
-  planPitch: 'The cheapest way to buy credits, and the only way to unlock private images.',
+  planPitch: 'The cheapest way to buy credits, and the only way to unlock private images and your own gallery.',
 
   /** One line under the "One-time credit packs" heading. */
   packPitch: 'No subscription, no renewal. Buy once and the credits stay until you spend them.',
