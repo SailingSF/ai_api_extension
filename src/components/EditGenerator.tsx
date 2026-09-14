@@ -7,6 +7,7 @@ import InPageNavbar from './InPageNavbar';
 import CreditNotice from './CreditNotice';
 import { useModelCatalog } from '../useModelCatalog';
 import { useAuth } from '../AuthContext';
+import { track } from '../analytics';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
 import { IMAGE_ACCEPT_ATTRIBUTE, validateImageFile } from '../imageFiles';
 import type { EditResponse } from '../types';
@@ -212,6 +213,7 @@ const EditGenerator: React.FC = () => {
 
       setResult(response.data);
       setSubmittedPrompt(prompt);
+      track('generate_image', { mode: 'edit' });
       // The edit just spent credits; pull the new balance so the navbar pill ticks
       // down instead of showing what the user had a moment ago.
       void refresh();

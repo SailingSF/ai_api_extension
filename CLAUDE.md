@@ -30,7 +30,7 @@ Requires a local `.env` (gitignored) with:
 - Auth is a **DRF token** in `localStorage` under `token`, sent as `Authorization: Token <key>` (not a JWT, despite the name). Activation happens via the `/activate/:token` route.
 - **Auth state comes from `useAuth()`** (`src/AuthContext.tsx`), not from reading `localStorage` during render. `<AuthProvider>` wraps the app in `src/App.tsx` and owns the token, the live account, and the single `AuthModal`. Reading the token at render time is not reactive — logging in would leave the rest of the page believing the user was signed out until the next navigation. Use `login(token)` rather than writing `localStorage` yourself; that is what updates the navbar balance.
 - **Billing and credits** have their own section below — read it before touching anything that displays a balance.
-- The GA4 measurement ID is hardcoded in `src/App.tsx`.
+- **Analytics** live in `src/analytics.ts`: GA4 (ID hardcoded there) plus Meta Pixel, X Pixel and Microsoft Clarity, each loaded only if its env var is set (`REACT_APP_META_PIXEL_ID`, `REACT_APP_X_PIXEL_ID`, `REACT_APP_X_SIGNUP_EVENT_ID`, `REACT_APP_X_PURCHASE_EVENT_ID`, `REACT_APP_CLARITY_PROJECT_ID`). Report conversions with `track()`, which fans out to every loaded tag. Don't send GA page views from the router — enhanced measurement already does, and doing both double-counted every page.
 - Formatting is Prettier (`.prettierrc.json`): single quotes, semicolons, 2-space indent, 100-col, `trailingComma: es5`. `prettier-plugin-tailwindcss` auto-sorts Tailwind classes, so don't hand-order `className` strings. Correctness linting is CRA's built-in `react-app` ESLint, with `eslint-config-prettier` disabling formatting rules that conflict.
 
 ## Billing and credits

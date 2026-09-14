@@ -8,6 +8,7 @@ import EditImageButton from './EditImageButton';
 import CreditNotice from './CreditNotice';
 import PrivateToggle from './PrivateToggle';
 import { useAuth } from '../AuthContext';
+import { track } from '../analytics';
 import { useModelCatalog } from '../useModelCatalog';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
 import type { ImageItem, PremiumModel } from '../types';
@@ -55,6 +56,7 @@ const ArenaGenerator: React.FC = () => {
         created_at: new Date().toISOString(),
       }));
       setGeneratedImages(reshapedResults);
+      track('generate_image', { mode: 'arena' });
       // An arena round spends credits across several models; re-read the balance so
       // the navbar pill reflects it immediately.
       void refresh();

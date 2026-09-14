@@ -11,6 +11,7 @@ import { HfInference } from '@huggingface/inference';
 import Tooltip from './Tooltip';
 import { useModelCatalog } from '../useModelCatalog';
 import { useAuth } from '../AuthContext';
+import { track } from '../analytics';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
@@ -119,6 +120,7 @@ const FreeImageGenerator: React.FC = () => {
         setGeneratedImageUrl(imageUrl);
         setImprovedPrompt(response.data.improved_prompt ?? null);
       }
+      track('generate_image', { mode: 'free' });
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error generating image:', error);
