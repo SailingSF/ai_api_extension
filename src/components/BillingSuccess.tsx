@@ -5,9 +5,31 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Clock, XCircle } from 'lucide-react';
 import InPageNavbar from './InPageNavbar';
 import { useAuth } from '../AuthContext';
-import type { CheckoutStatus } from '../types';
+import { track } from '../analytics';
+import type { BillingCatalog, CheckoutStatus } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
+
+// Reported once per checkout session: this page polls, and it can be reloaded. The
+// status doesn't carry the price, so it's read from the catalog like everywhere else.
+const trackPurchase = async (status: CheckoutStatus): Promise<void> => {
+  const key = `purchase_tracked:${status.session_id}`;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, '1');
+  const catalog = await axios
+    .get<BillingCatalog>(`${API_BASE_URL}/api/billing/products/`)
+    .then((r) => r.data)
+    .catch(() => null);
+  const product = [...(catalog?.credit_packs ?? []), ...(catalog?.subscription_plans ?? [])].find(
+    (p) => p.key === status.product_key
+  );
+  track('purchase', {
+    transaction_id: status.session_id,
+    item_id: status.product_key,
+    value: product?.price_usd ?? 0,
+    currency: 'USD',
+  });
+};
 
 // Credits are granted by a Stripe webhook, which normally lands within a couple of
 // seconds of the redirect but can lag if Stripe is retrying. Poll rather than read
@@ -35,6 +57,8 @@ const BillingSuccess: React.FC = () => {
         { params: { session_id: sessionId }, headers: { Authorization: `Token ${token}` } }
       );
       setStatus(response.data);
+      // `paid`, not `fulfilled`: the sale happened once Stripe has the money.
+      if (response.data.paid) void trackPurchase(response.data);
       // Once the webhook has landed, pull the shared account through so the navbar
       // pill shows the topped-up balance without waiting for a navigation.
       if (response.data.fulfilled) void refresh();

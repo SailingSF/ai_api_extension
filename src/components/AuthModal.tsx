@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { MailCheck } from 'lucide-react';
 import { useAuth } from '../AuthContext';
+import { track } from '../analytics';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
 import type { AuthModalProps } from '../types';
 
@@ -65,6 +66,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, message }) => {
         // Hand the token to the provider rather than writing localStorage directly:
         // that's what makes the navbar balance and the generators update right away.
         await login(response.data.token);
+        track(isLogin ? 'login' : 'sign_up');
 
         if (isLogin) {
           setSuccessMessage('Login successful!');

@@ -1,12 +1,11 @@
 import React, { Suspense, useEffect } from 'react';
-import ReactGA from 'react-ga4';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import AuthModal from './components/AuthModal';
 import ActivateAccount from './components/ActivateAccount';
-import usePageTracking from './usePageTracking';
 import LoadingSpinner from './components/LoadingSpinner';
 import { AuthProvider, useAuth } from './AuthContext';
+import { initAnalytics } from './analytics';
 
 // One canonical tag for every route, built from the path. Each page used to declare
 // its own and they all named `yourdomain.com`, which told search engines the real
@@ -30,8 +29,6 @@ function AppContent(): JSX.Element {
   // so which instance you were looking at depended on where you clicked.
   const { isAuthModalOpen, authModalMessage, closeAuthModal } = useAuth();
   const { pathname } = useLocation();
-
-  usePageTracking();
 
   return (
     <div className="App min-h-screen bg-gradient-to-br from-purple-400 to-indigo-600 p-4 font-sans sm:p-8">
@@ -70,7 +67,7 @@ function AppContent(): JSX.Element {
 
 function App(): JSX.Element {
   useEffect(() => {
-    ReactGA.initialize('G-EKLE5ZL133');
+    initAnalytics();
   }, []);
 
   return (

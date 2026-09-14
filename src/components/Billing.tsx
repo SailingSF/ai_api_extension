@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Check, CreditCard, Settings, Sparkles } from 'lucide-react';
 import InPageNavbar from './InPageNavbar';
 import { useAuth } from '../AuthContext';
+import { track } from '../analytics';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
 import { BILLING_COPY } from '../billingCopy';
 import type { BillingCatalog, CreditPack, SubscriptionPlan } from '../types';
@@ -43,6 +44,7 @@ const Billing: React.FC = () => {
         { product_key: productKey },
         { headers: { Authorization: `Token ${token}` } }
       );
+      track('begin_checkout', { item_id: productKey });
       // Full navigation, not a router push -- Stripe's page is off-origin.
       window.location.href = response.data.checkout_url;
     } catch {

@@ -10,6 +10,7 @@ import VisibilityToggle from './VisibilityToggle';
 import axios from 'axios';
 import { useModelCatalog } from '../useModelCatalog';
 import { useAuth } from '../AuthContext';
+import { track } from '../analytics';
 import { SIGNUP_BONUS_CREDITS } from '../constants';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL as string | undefined;
@@ -106,6 +107,7 @@ const PremiumGenerator: React.FC = () => {
       setGeneratedImageId(response.data.image_id ?? null);
       setIsResultPublic(!isPrivate);
       setImprovedPrompt(response.data.improved_prompt ?? null);
+      track('generate_image', { mode: 'premium' });
       // The generation just spent credits; pull the new balance so the navbar pill
       // ticks down instead of showing what the user had a moment ago.
       void refresh();
